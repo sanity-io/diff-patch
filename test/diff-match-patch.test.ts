@@ -27,7 +27,7 @@ describe('diff match patch', () => {
     expect(
       diffPatch(dmp.unicodeChangeIn, dmp.unicodeChangeOut, {
         diffMatchPatch: {lengthThresholdAbsolute: 1, lengthThresholdRelative: 3},
-      })
+      }),
     ).toMatchSnapshot()
   })
 })

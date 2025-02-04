@@ -27,7 +27,8 @@ export function validateDocument(item: unknown, path: Path = []): boolean {
   if (typeof item === 'object' && item !== null) {
     const obj = item as {[key: string]: any}
     return Object.keys(obj).every(
-      (key) => validateProperty(key, obj[key], path) && validateDocument(obj[key], path.concat(key))
+      (key) =>
+        validateProperty(key, obj[key], path) && validateDocument(obj[key], path.concat(key)),
     )
   }
 
@@ -52,7 +53,7 @@ export function validateProperty(property: string, value: unknown, path: Path): 
     throw new DiffError(
       'Keys can only contain letters, numbers and underscores',
       path.concat(property),
-      value
+      value,
     )
   }
 
