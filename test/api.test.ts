@@ -6,20 +6,20 @@ import * as setAndUnset from './fixtures/set-and-unset'
 describe('module api', () => {
   test('can include ifRevisionID', () => {
     expect(
-      diffPatch(setAndUnset.a, setAndUnset.b, {ifRevisionID: 'foo', hideWarnings: true})
+      diffPatch(setAndUnset.a, setAndUnset.b, {ifRevisionID: 'foo', hideWarnings: true}),
     ).toMatchSnapshot()
   })
 
   test('can pass different document ID', () => {
     expect(
-      diffPatch(setAndUnset.a, setAndUnset.b, {id: 'moop', hideWarnings: true})
+      diffPatch(setAndUnset.a, setAndUnset.b, {id: 'moop', hideWarnings: true}),
     ).toMatchSnapshot()
   })
 
   test('throws if ids do not match', () => {
     const b = {...setAndUnset.b, _id: 'zing'}
     expect(() => diffPatch(setAndUnset.a, b, {hideWarnings: true})).toThrowError(
-      `_id on itemA and itemB not present or differs, specify document id the mutations should be applied to`
+      `_id on itemA and itemB not present or differs, specify document id the mutations should be applied to`,
     )
   })
 
@@ -30,7 +30,7 @@ describe('module api', () => {
 
   test('pathToString throws on invalid path segments', () => {
     expect(() =>
-      pathToString(['foo', {foo: 'bar'} as any, 'blah'])
+      pathToString(['foo', {foo: 'bar'} as any, 'blah']),
     ).toThrowErrorMatchingInlineSnapshot(`[Error: Unsupported path segment "[object Object]"]`)
   })
 })

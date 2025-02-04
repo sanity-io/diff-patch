@@ -174,7 +174,7 @@ function mergeOptions(options: PatchOptions): DiffOptions {
 export function diffPatch(
   itemA: DocumentStub,
   itemB: DocumentStub,
-  opts?: PatchOptions
+  opts?: PatchOptions,
 ): SanityPatchMutation[] {
   const options = mergeOptions(opts || {})
   const id = options.id || (itemA._id === itemB._id && itemA._id)
@@ -183,13 +183,13 @@ export function diffPatch(
   const basePath = options.basePath || []
   if (!id) {
     throw new Error(
-      '_id on itemA and itemB not present or differs, specify document id the mutations should be applied to'
+      '_id on itemA and itemB not present or differs, specify document id the mutations should be applied to',
     )
   }
 
   if (revisionLocked === true && !ifRevisionID) {
     throw new Error(
-      '`ifRevisionID` is set to `true`, but no `_rev` was passed in item A. Either explicitly set `ifRevisionID` to a revision, or pass `_rev` as part of item A.'
+      '`ifRevisionID` is set to `true`, but no `_rev` was passed in item A. Either explicitly set `ifRevisionID` to a revision, or pass `_rev` as part of item A.',
     )
   }
 
@@ -218,7 +218,7 @@ export function diffItem(
   itemB: unknown,
   opts: DiffOptions = defaultOptions,
   path: Path = [],
-  patches: Patch[] = []
+  patches: Patch[] = [],
 ): Patch[] {
   if (itemA === itemB) {
     return patches
@@ -263,7 +263,7 @@ function diffObject(
   itemB: SanityObject,
   options: DiffOptions,
   path: Path,
-  patches: Patch[]
+  patches: Patch[],
 ) {
   const atRoot = path.length === 0
   const aKeys = Object.keys(itemA)
@@ -299,7 +299,7 @@ function diffArray(
   itemB: unknown[],
   options: DiffOptions,
   path: Path,
-  patches: Patch[]
+  patches: Patch[],
 ) {
   // Check for new items
   if (itemB.length > itemA.length) {
@@ -327,8 +327,8 @@ function diffArray(
     } else {
       patches.push(
         ...unsetItems.map(
-          (item): UnsetPatch => ({op: 'unset', path: path.concat({_key: item._key})})
-        )
+          (item): UnsetPatch => ({op: 'unset', path: path.concat({_key: item._key})}),
+        ),
       )
     }
   }
@@ -354,7 +354,7 @@ function diffArrayByIndex(
   itemB: unknown[],
   options: DiffOptions,
   path: Path,
-  patches: Patch[]
+  patches: Patch[],
 ) {
   for (let i = 0; i < itemA.length; i++) {
     diffItem(
@@ -362,7 +362,7 @@ function diffArrayByIndex(
       nullifyUndefined(itemB[i], path, i, options),
       options,
       path.concat(i),
-      patches
+      patches,
     )
   }
 
@@ -374,7 +374,7 @@ function diffArrayByKey(
   itemB: KeyedSanityObject[],
   options: DiffOptions,
   path: Path,
-  patches: Patch[]
+  patches: Patch[],
 ) {
   const keyedA = indexByKey(itemA)
   const keyedB = indexByKey(itemB)
@@ -399,7 +399,7 @@ function getDiffMatchPatch(
   itemA: PrimitiveValue,
   itemB: PrimitiveValue,
   options: DiffOptions,
-  path: Path
+  path: Path,
 ): DiffMatchPatch | undefined {
   const {enabled, lengthThresholdRelative, lengthThresholdAbsolute} = options.diffMatchPatch
   const segment = path[path.length - 1]
@@ -439,7 +439,7 @@ function diffPrimitive(
   itemB: PrimitiveValue,
   options: DiffOptions,
   path: Path,
-  patches: Patch[]
+  patches: Patch[],
 ): Patch[] {
   const dmp = getDiffMatchPatch(itemA, itemB, options, path)
 
@@ -448,7 +448,7 @@ function diffPrimitive(
       op: 'set',
       path,
       value: itemB,
-    }
+    },
   )
 
   return patches
@@ -460,7 +460,7 @@ function isNotIgnoredKey(key: string) {
 
 function serializePatches(
   patches: Patch[],
-  options: {id: string; ifRevisionID?: string}
+  options: {id: string; ifRevisionID?: string},
 ): SanityPatchMutation[] {
   if (patches.length === 0) {
     return []
@@ -480,7 +480,7 @@ function serializePatches(
         patch.set[path] = item.value
         return patch
       },
-      {id, set: {}}
+      {id, set: {}},
     )
 
   const withUnset =
@@ -491,7 +491,7 @@ function serializePatches(
         patch.unset.push(path)
         return patch
       },
-      {id, unset: []}
+      {id, unset: []},
     )
 
   const withInsert = insert.reduce((acc: SanityInsertPatch[], item: InsertAfterPatch) => {
@@ -507,11 +507,11 @@ function serializePatches(
         patch.diffMatchPatch[path] = item.value
         return patch
       },
-      {id, diffMatchPatch: {}}
+      {id, diffMatchPatch: {}},
     )
 
   const patchSet: SanityPatch[] = [withUnset, withSet, withDmp, ...withInsert].filter(
-    (item): item is SanityPatch => item !== false
+    (item): item is SanityPatch => item !== false,
   )
 
   return patchSet.map((patch, i) => ({
@@ -545,7 +545,7 @@ function indexByKey(arr: KeyedSanityObject[]) {
       acc.index[item._key] = item
       return acc
     },
-    {keys: [] as string[], index: {} as {[key: string]: KeyedSanityObject}}
+    {keys: [] as string[], index: {} as {[key: string]: KeyedSanityObject}},
   )
 }
 

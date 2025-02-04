@@ -15,7 +15,7 @@ function omitIgnored(obj: {[key: string]: any}): {[key: string]: any} {
 function nullifyUndefinedArrayItems(item: unknown): unknown {
   if (Array.isArray(item)) {
     return item.map((child) =>
-      typeof child === 'undefined' ? null : nullifyUndefinedArrayItems(child)
+      typeof child === 'undefined' ? null : nullifyUndefinedArrayItems(child),
     )
   }
 
@@ -79,7 +79,10 @@ describe.skipIf(lacksConfig)(
       fs
         .readdirSync(fixturesDir)
         .filter((file) => /\.ts$/.test(file))
-        .map(async (file) => ({file, fixture: await readCodeFixture(path.join(fixturesDir, file))}))
+        .map(async (file) => ({
+          file,
+          fixture: await readCodeFixture(path.join(fixturesDir, file)),
+        })),
     )
 
     const jsFixtures = rawJsFixtures.reduce((acc: Fixture[], item: JsFixture) => {
@@ -99,7 +102,7 @@ describe.skipIf(lacksConfig)(
           }
 
           return set
-        }, [])
+        }, []),
       )
     }, [])
 
@@ -126,7 +129,7 @@ describe.skipIf(lacksConfig)(
               returnFirst: true,
               dryRun: true,
             }),
-          {throwOnTimeout: true, timeout: 10000}
+          {throwOnTimeout: true, timeout: 10000},
         )
 
         expect(omitIgnored(result)).toEqual(nullifyUndefinedArrayItems(omitIgnored(output)))
@@ -135,7 +138,7 @@ describe.skipIf(lacksConfig)(
   },
   {
     timeout: 120000,
-  }
+  },
 )
 
 function readJsonFixture(fixturePath: string) {

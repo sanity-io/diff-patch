@@ -1,6 +1,6 @@
-# sanity-diff-patch
+# @sanity/diff-patch
 
-[![npm version](https://img.shields.io/npm/v/sanity-diff-patch.svg?style=flat-square)](https://www.npmjs.com/package/sanity-diff-patch)[![npm bundle size](https://img.shields.io/bundlephobia/minzip/sanity-diff-patch?style=flat-square)](https://bundlephobia.com/result?p=sanity-diff-patch)[![npm weekly downloads](https://img.shields.io/npm/dw/sanity-diff-patch.svg?style=flat-square)](https://www.npmjs.com/package/sanity-diff-patch)
+[![npm version](https://img.shields.io/npm/v/@sanity/diff-patch.svg?style=flat-square)](https://www.npmjs.com/package/@sanity/diff-patch)[![npm bundle size](https://img.shields.io/bundlephobia/minzip/@sanity/diff-patch?style=flat-square)](https://bundlephobia.com/result?p=@sanity/diff-patch)[![npm weekly downloads](https://img.shields.io/npm/dw/@sanity/diff-patch.svg?style=flat-square)](https://www.npmjs.com/package/@sanity/diff-patch)
 
 Generates a set of [Sanity](https://www.sanity.io/) patch mutations needed to change an item (usually a document) from one shape to another.
 
@@ -14,12 +14,12 @@ If encountering `undefined` values within an array, they will be converted to `n
 
 ## Getting started
 
-npm install --save sanity-diff-patch
+npm install --save @sanity/diff-patch
 
 ## Usage
 
 ```js
-import {diffPatch} from 'sanity-diff-patch'
+import {diffPatch} from '@sanity/diff-patch'
 
 const patch = diffPatch(itemA, itemB)
 /*
@@ -34,7 +34,7 @@ const patch = diffPatch(itemA, itemB)
 ## Usage with mutations
 
 ```js
-import {diffPatch} from 'sanity-diff-patch'
+import {diffPatch} from '@sanity/diff-patch'
 import sanityClient from './myConfiguredSanityClient'
 
 const itemA = {
@@ -110,7 +110,7 @@ The default rules says:
 To tune these rules, you can pass options to the differ:
 
 ```js
-import {diffPatch} from 'sanity-diff-patch'
+import {diffPatch} from '@sanity/diff-patch'
 
 diffPatch(itemA, itemB, {
   diffMatchPatch: {
@@ -124,8 +124,8 @@ diffPatch(itemA, itemB, {
     // (targetString * relative). Example: A 100 character target with a relative factor
     // of 1.2 will allow a 120 character diff-match-patch. If larger than this number,
     // it will fall back to a regular `set` patch.
-    lengthThresholdRelative: 1.2
-  }
+    lengthThresholdRelative: 1.2,
+  },
 })
 ```
 
@@ -141,4 +141,4 @@ In addition to these rules, there are certain cases where it will never use diff
 
 ## License
 
-MIT © [Espen Hovlandsdal](https://espen.codes/)
+MIT © [Sanity.io](https://sanity.io/)
