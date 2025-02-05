@@ -1,6 +1,6 @@
 {
   "name": "@sanity/diff-patch",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "description": "Generates a set of Sanity patches needed to change an item (usually a document) from one shape to another",
   "sideEffects": false,
   "type": "module",

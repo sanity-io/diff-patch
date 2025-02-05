@@ -5,6 +5,16 @@
 All notable changes to this project will be documented in this file. See
 [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.0.0](https://github.com/sanity-io/diff-patch/compare/v4.0.0...v5.0.0) (2025-02-05)
+
+### ⚠ BREAKING CHANGES
+
+- Module name is now `@sanity/diff-patch` (from previous `sanity-diff-patch`). Update imports accordingly!
+
+### Features
+
+- rename module to `@sanity/diff-patch` ([#33](https://github.com/sanity-io/diff-patch/issues/33)) ([891241f](https://github.com/sanity-io/diff-patch/commit/891241fcebe17de4af20322fd99fbdd7dd336a76))
+
 ## [4.0.0](https://github.com/sanity-io/diff-patch/compare/v3.0.4...v4.0.0) (2024-10-15)
 
 ### ⚠ BREAKING CHANGES
