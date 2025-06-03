@@ -117,7 +117,7 @@ describe.skipIf(lacksConfig)(
 
         const input = {...fix.fixture.input, _id, _type}
         const output = {...fix.fixture.output, _id, _type}
-        const diff = diffPatch(input, output, {hideWarnings: true})
+        const diff = diffPatch(input, output)
 
         const trx = client.transaction().createOrReplace(input).serialize()
 

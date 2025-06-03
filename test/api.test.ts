@@ -5,27 +5,23 @@ import * as setAndUnset from './fixtures/set-and-unset'
 
 describe('module api', () => {
   test('can include ifRevisionID', () => {
-    expect(
-      diffPatch(setAndUnset.a, setAndUnset.b, {ifRevisionID: 'foo', hideWarnings: true}),
-    ).toMatchSnapshot()
+    expect(diffPatch(setAndUnset.a, setAndUnset.b, {ifRevisionID: 'foo'})).toMatchSnapshot()
   })
 
   test('can pass different document ID', () => {
-    expect(
-      diffPatch(setAndUnset.a, setAndUnset.b, {id: 'moop', hideWarnings: true}),
-    ).toMatchSnapshot()
+    expect(diffPatch(setAndUnset.a, setAndUnset.b, {id: 'moop'})).toMatchSnapshot()
   })
 
   test('throws if ids do not match', () => {
     const b = {...setAndUnset.b, _id: 'zing'}
-    expect(() => diffPatch(setAndUnset.a, b, {hideWarnings: true})).toThrowError(
+    expect(() => diffPatch(setAndUnset.a, b)).toThrowError(
       `_id on itemA and itemB not present or differs, specify document id the mutations should be applied to`,
     )
   })
 
   test('does not throw if ids do not match and id is provided', () => {
     const b = {...setAndUnset.b, _id: 'zing'}
-    expect(diffPatch(setAndUnset.a, b, {id: 'yup', hideWarnings: true})).toHaveLength(3)
+    expect(diffPatch(setAndUnset.a, b, {id: 'yup'})).toHaveLength(3)
   })
 
   test('pathToString throws on invalid path segments', () => {

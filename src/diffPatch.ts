@@ -41,10 +41,6 @@ const DMP_MAX_STRING_LENGTH_CHANGE_RATIO = 0.4
  */
 const DMP_MIN_SIZE_FOR_RATIO_CHECK = 10_000
 
-const DEFAULT_OPTIONS: PatchOptions = {
-  hideWarnings: false,
-}
-
 type PrimitiveValue = string | number | boolean | null | undefined
 
 /**
@@ -106,13 +102,6 @@ export interface PatchOptions {
    * @defaultValue `undefined` (do not apply revision check)
    */
   ifRevisionID?: string | true
-
-  /**
-   * Whether or not to hide warnings during the diff process.
-   *
-   * @defaultValue `false`
-   */
-  hideWarnings?: boolean
 }
 
 /**
@@ -150,7 +139,7 @@ export function diffPatch(
     throw new Error(`_type is immutable and cannot be changed (${itemA._type} => ${itemB._type})`)
   }
 
-  const operations = diffItem(itemA, itemB, options, basePath, [])
+  const operations = diffItem(itemA, itemB, basePath, [])
   return serializePatches(operations, {id, ifRevisionID: revisionLocked ? ifRevisionID : undefined})
 }
 
@@ -169,7 +158,6 @@ export function diffPatch(
 export function diffItem(
   itemA: unknown,
   itemB: unknown,
-  options = DEFAULT_OPTIONS,
   path: Path = [],
   patches: Patch[] = [],
 ): Patch[] {
@@ -206,17 +194,11 @@ export function diffItem(
   }
 
   return dataType === 'array'
-    ? diffArray(itemA as unknown[], itemB as unknown[], options, path, patches)
-    : diffObject(itemA as object, itemB as object, options, path, patches)
+    ? diffArray(itemA as unknown[], itemB as unknown[], path, patches)
+    : diffObject(itemA as object, itemB as object, path, patches)
 }
 
-function diffObject(
-  itemA: SanityObject,
-  itemB: SanityObject,
-  options: PatchOptions,
-  path: Path,
-  patches: Patch[],
-) {
+function diffObject(itemA: SanityObject, itemB: SanityObject, path: Path, patches: Patch[]) {
   const atRoot = path.length === 0
   const aKeys = Object.keys(itemA)
     .filter(atRoot ? isNotIgnoredKey : yes)
@@ -240,25 +222,19 @@ function diffObject(
   // Check for changed items
   for (let i = 0; i < bKeysLength; i++) {
     const key = bKeys[i]
-    diffItem(itemA[key], itemB[key], options, path.concat([key]), patches)
+    diffItem(itemA[key], itemB[key], path.concat([key]), patches)
   }
 
   return patches
 }
 
-function diffArray(
-  itemA: unknown[],
-  itemB: unknown[],
-  options: PatchOptions,
-  path: Path,
-  patches: Patch[],
-) {
+function diffArray(itemA: unknown[], itemB: unknown[], path: Path, patches: Patch[]) {
   // Check for new items
   if (itemB.length > itemA.length) {
     patches.push({
       op: 'insert',
       after: path.concat([-1]),
-      items: itemB.slice(itemA.length).map((item, i) => nullifyUndefined(item, path, i, options)),
+      items: itemB.slice(itemA.length).map(nullifyUndefined),
     })
   }
 
@@ -295,25 +271,13 @@ function diffArray(
   const segmentB = itemB.slice(0, overlapping)
 
   return isUniquelyKeyed(segmentA) && isUniquelyKeyed(segmentB)
-    ? diffArrayByKey(segmentA, segmentB, options, path, patches)
-    : diffArrayByIndex(segmentA, segmentB, options, path, patches)
+    ? diffArrayByKey(segmentA, segmentB, path, patches)
+    : diffArrayByIndex(segmentA, segmentB, path, patches)
 }
 
-function diffArrayByIndex(
-  itemA: unknown[],
-  itemB: unknown[],
-  options: PatchOptions,
-  path: Path,
-  patches: Patch[],
-) {
+function diffArrayByIndex(itemA: unknown[], itemB: unknown[], path: Path, patches: Patch[]) {
   for (let i = 0; i < itemA.length; i++) {
-    diffItem(
-      itemA[i],
-      nullifyUndefined(itemB[i], path, i, options),
-      options,
-      path.concat(i),
-      patches,
-    )
+    diffItem(itemA[i], nullifyUndefined(itemB[i]), path.concat(i), patches)
   }
 
   return patches
@@ -322,7 +286,6 @@ function diffArrayByIndex(
 function diffArrayByKey(
   itemA: KeyedSanityObject[],
   itemB: KeyedSanityObject[],
-  options: PatchOptions,
   path: Path,
   patches: Patch[],
 ) {
@@ -332,14 +295,14 @@ function diffArrayByKey(
   // There's a bunch of hard/semi-hard problems related to using keys
   // Unless we have the exact same order, just use indexes for now
   if (!arrayIsEqual(keyedA.keys, keyedB.keys)) {
-    return diffArrayByIndex(itemA, itemB, options, path, patches)
+    return diffArrayByIndex(itemA, itemB, path, patches)
   }
 
   for (let i = 0; i < keyedB.keys.length; i++) {
     const key = keyedB.keys[i]
     const valueA = keyedA.index[key]
-    const valueB = nullifyUndefined(keyedB.index[key], path, i, options)
-    diffItem(valueA, valueB, options, path.concat({_key: key}), patches)
+    const valueB = nullifyUndefined(keyedB.index[key])
+    diffItem(valueA, valueB, path.concat({_key: key}), patches)
   }
 
   return patches
@@ -583,17 +546,14 @@ function arrayIsEqual(itemA: unknown[], itemB: unknown[]) {
   return itemA.length === itemB.length && itemA.every((item, i) => itemB[i] === item)
 }
 
-function nullifyUndefined(item: unknown, path: Path, index: number, options: PatchOptions) {
-  if (typeof item !== 'undefined') {
-    return item
-  }
-
-  if (!options.hideWarnings) {
-    const serializedPath = pathToString(path.concat(index))
-    console.warn(`undefined value in array converted to null (at '${serializedPath}')`)
-  }
-
-  return null
+/**
+ * Simplify returns `null` if the value given was `undefined`. This behavior
+ * is the same as how `JSON.stringify` works so this is relatively expected
+ * behavior.
+ */
+function nullifyUndefined(item: unknown) {
+  if (item === undefined) return null
+  return item
 }
 
 function yes(_: unknown) {
