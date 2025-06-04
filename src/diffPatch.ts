@@ -1,6 +1,6 @@
 import {makePatches, stringifyPatches} from '@sanity/diff-match-patch'
 import {DiffError} from './diffError.js'
-import {type Path, pathToString} from './paths.js'
+import {type KeyedSanityObject, type Path, pathToString} from './paths.js'
 import {validateProperty} from './validate.js'
 import {
   type Patch,
@@ -40,16 +40,6 @@ const DMP_MAX_STRING_LENGTH_CHANGE_RATIO = 0.4
 const DMP_MIN_SIZE_FOR_RATIO_CHECK = 10_000
 
 type PrimitiveValue = string | number | boolean | null | undefined
-
-/**
- * An object (record) that has a `_key` property
- *
- * @internal
- */
-export interface KeyedSanityObject {
-  [key: string]: unknown
-  _key: string
-}
 
 /**
  * An object (record) that _may_ have a `_key` property

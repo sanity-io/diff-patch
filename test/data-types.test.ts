@@ -2,10 +2,12 @@ import {describe, test, expect} from 'vitest'
 import {diffPatch} from '../src'
 import * as dataTypes from './fixtures/data-types'
 import * as typeChange from './fixtures/type-change'
+import {applyPatches} from './helpers/applyPatches'
 
 describe('diff data types', () => {
   test('same data type', () => {
-    expect(diffPatch(dataTypes.a, dataTypes.b)).toEqual([
+    const patches = diffPatch(dataTypes.a, dataTypes.b)
+    expect(patches).toEqual([
       {
         patch: {
           id: dataTypes.a._id,
@@ -35,10 +37,12 @@ describe('diff data types', () => {
         },
       },
     ])
+    expect(applyPatches(dataTypes.a, patches)).toEqual(dataTypes.b)
   })
 
   test('different data type', () => {
-    expect(diffPatch(dataTypes.a, dataTypes.c)).toEqual([
+    const patches = diffPatch(dataTypes.a, dataTypes.c)
+    expect(patches).toEqual([
       {
         patch: {
           id: dataTypes.a._id,
@@ -53,10 +57,12 @@ describe('diff data types', () => {
         },
       },
     ])
+    expect(applyPatches(dataTypes.a, patches)).toEqual(dataTypes.c)
   })
 
   test('different data type (object => array)', () => {
-    expect(diffPatch(dataTypes.a, dataTypes.d)).toEqual([
+    const patches = diffPatch(dataTypes.a, dataTypes.d)
+    expect(patches).toEqual([
       {
         patch: {
           id: dataTypes.a._id,
@@ -64,13 +70,15 @@ describe('diff data types', () => {
         },
       },
     ])
+    expect(applyPatches(dataTypes.a, patches)).toEqual(dataTypes.d)
   })
 
   test('type changes', () => {
-    expect(diffPatch(typeChange.a, typeChange.b)).toEqual([
+    const patches = diffPatch(typeChange.a, typeChange.b)
+    expect(patches).toEqual([
       {patch: {id: 'abc123', unset: ['unset']}},
       {patch: {id: 'abc123', set: {number: 1337}}},
-      {patch: {diffMatchPatch: {string: '@@ -1,3 +1,3 @@\n-foo\n+bar\n'}, id: 'abc123'}},
+      {patch: {id: 'abc123', diffMatchPatch: {string: '@@ -1,3 +1,3 @@\n-foo\n+bar\n'}}},
       {patch: {id: 'abc123', set: {'array[0]': 0, 'array[1]': 'one', bool: false}}},
       {patch: {id: 'abc123', unset: ['array[2].two.levels.deep']}},
       {
@@ -80,5 +88,6 @@ describe('diff data types', () => {
         },
       },
     ])
+    expect(applyPatches(typeChange.a, patches)).toEqual(typeChange.b)
   })
 })

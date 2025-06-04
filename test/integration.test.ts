@@ -4,6 +4,7 @@ import path from 'path'
 import PQueue from 'p-queue'
 import {createClient} from '@sanity/client'
 import {describe, test, expect} from 'vitest'
+import {applyPatches} from './helpers/applyPatches'
 
 import {diffPatch} from '../src'
 
@@ -57,16 +58,9 @@ interface JsFixture {
   fixture: {[key: string]: any}
 }
 
-describe.skipIf(lacksConfig)(
+describe(
   'integration tests',
   async () => {
-    const client = createClient({
-      projectId: projectId || 'ci',
-      dataset,
-      token,
-      useCdn: false,
-      apiVersion: '2023-04-24',
-    })
     const fixturesDir = path.join(__dirname, 'fixtures')
     const jsonFixturesDir = path.join(fixturesDir, 'integration')
 
@@ -119,18 +113,31 @@ describe.skipIf(lacksConfig)(
         const output = {...fix.fixture.output, _id, _type}
         const diff = diffPatch(input, output)
 
-        const trx = client.transaction().createOrReplace(input).serialize()
+        let result
 
-        const result = await queue.add(
-          () =>
-            client.transaction([...trx, ...diff]).commit({
-              visibility: 'async',
-              returnDocuments: true,
-              returnFirst: true,
-              dryRun: true,
-            }),
-          {throwOnTimeout: true, timeout: 10000},
-        )
+        if (lacksConfig) {
+          result = applyPatches(input, diff)
+        } else {
+          const client = createClient({
+            projectId: projectId || 'ci',
+            dataset,
+            token,
+            useCdn: false,
+            apiVersion: '2023-04-24',
+          })
+          const trx = client.transaction().createOrReplace(input).serialize()
+
+          result = await queue.add(
+            () =>
+              client.transaction([...trx, ...diff]).commit({
+                visibility: 'async',
+                returnDocuments: true,
+                returnFirst: true,
+                dryRun: true,
+              }),
+            {throwOnTimeout: true, timeout: 10000},
+          )
+        }
 
         expect(omitIgnored(result)).toEqual(nullifyUndefinedArrayItems(omitIgnored(output)))
       })

@@ -1,33 +1,42 @@
 import {describe, test, expect} from 'vitest'
 import {diffPatch} from '../src'
 import * as dmp from './fixtures/dmp'
+import {applyPatches} from './helpers/applyPatches'
 
 describe('diff match patch', () => {
   test('respects absolute length threshold', () => {
-    expect(diffPatch(dmp.absoluteIn, dmp.absoluteOut)).toMatchSnapshot()
+    const patches = diffPatch(dmp.absoluteIn, dmp.absoluteOut)
+    expect(patches).toMatchSnapshot()
+    expect(applyPatches(dmp.absoluteIn, patches)).toEqual(dmp.absoluteOut)
   })
 
   test('respects relative length threshold', () => {
-    expect(diffPatch(dmp.relativeOverIn, dmp.relativeOverOut)).toMatchSnapshot()
+    const patches = diffPatch(dmp.relativeOverIn, dmp.relativeOverOut)
+    expect(patches).toMatchSnapshot()
+    expect(applyPatches(dmp.relativeOverIn, patches)).toEqual(dmp.relativeOverOut)
   })
 
   test('respects relative length threshold (allowed)', () => {
-    expect(diffPatch(dmp.relativeUnderIn, dmp.relativeUnderOut)).toMatchSnapshot()
+    const patches = diffPatch(dmp.relativeUnderIn, dmp.relativeUnderOut)
+    expect(patches).toMatchSnapshot()
+    expect(applyPatches(dmp.relativeUnderIn, patches)).toEqual(dmp.relativeUnderOut)
   })
 
   test('does not use dmp for "privates" (underscore-prefixed keys)', () => {
-    expect(diffPatch(dmp.privateChangeIn, dmp.privateChangeOut)).toMatchSnapshot()
+    const patches = diffPatch(dmp.privateChangeIn, dmp.privateChangeOut)
+    expect(patches).toMatchSnapshot()
+    expect(applyPatches(dmp.privateChangeIn, patches)).toEqual(dmp.privateChangeOut)
   })
 
   test('does not use dmp for "type changes" (number => string)', () => {
-    expect(diffPatch(dmp.typeChangeIn, dmp.typeChangeOut)).toMatchSnapshot()
+    const patches = diffPatch(dmp.typeChangeIn, dmp.typeChangeOut)
+    expect(patches).toMatchSnapshot()
+    expect(applyPatches(dmp.typeChangeIn, patches)).toEqual(dmp.typeChangeOut)
   })
 
   test('handles patching with unicode surrogate pairs', () => {
-    expect(
-      diffPatch(dmp.unicodeChangeIn, dmp.unicodeChangeOut, {
-        diffMatchPatch: {lengthThresholdAbsolute: 1, lengthThresholdRelative: 3},
-      }),
-    ).toMatchSnapshot()
+    const patches = diffPatch(dmp.unicodeChangeIn, dmp.unicodeChangeOut)
+    expect(patches).toMatchSnapshot()
+    expect(applyPatches(dmp.unicodeChangeIn, patches)).toEqual(dmp.unicodeChangeOut)
   })
 })

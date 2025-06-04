@@ -1,4 +1,12 @@
-import type {KeyedSanityObject} from './diffPatch.js'
+/**
+ * An object (record) that has a `_key` property
+ *
+ * @internal
+ */
+export interface KeyedSanityObject {
+  [key: string]: unknown
+  _key: string
+}
 
 const IS_DOTTABLE_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
 
@@ -54,6 +62,6 @@ export function pathToString(path: Path): string {
   }, '')
 }
 
-function isKeyedObject(obj: any): obj is KeyedSanityObject {
-  return typeof obj === 'object' && typeof obj._key === 'string'
+export function isKeyedObject(obj: unknown): obj is KeyedSanityObject {
+  return typeof obj === 'object' && !!obj && '_key' in obj && typeof obj._key === 'string'
 }
