@@ -95,24 +95,24 @@ export interface PatchOptions {
  * Generates an array of mutations for Sanity, based on the differences between
  * the two passed documents/trees.
  *
- * @param itemA - The first document/tree to compare
- * @param itemB - The second document/tree to compare
+ * @param source - The first document/tree to compare
+ * @param target - The second document/tree to compare
  * @param opts - Options for the diff generation
  * @returns Array of mutations
  * @public
  */
 export function diffPatch(
-  itemA: DocumentStub,
-  itemB: DocumentStub,
+  source: DocumentStub,
+  target: DocumentStub,
   options: PatchOptions = {},
 ): SanityPatchMutation[] {
-  const id = options.id || (itemA._id === itemB._id && itemA._id)
+  const id = options.id || (source._id === target._id && source._id)
   const revisionLocked = options.ifRevisionID
-  const ifRevisionID = typeof revisionLocked === 'boolean' ? itemA._rev : revisionLocked
+  const ifRevisionID = typeof revisionLocked === 'boolean' ? source._rev : revisionLocked
   const basePath = options.basePath || []
   if (!id) {
     throw new Error(
-      '_id on itemA and itemB not present or differs, specify document id the mutations should be applied to',
+      '_id on source and target not present or differs, specify document id the mutations should be applied to',
     )
   }
 
@@ -122,11 +122,11 @@ export function diffPatch(
     )
   }
 
-  if (basePath.length === 0 && itemA._type !== itemB._type) {
-    throw new Error(`_type is immutable and cannot be changed (${itemA._type} => ${itemB._type})`)
+  if (basePath.length === 0 && source._type !== target._type) {
+    throw new Error(`_type is immutable and cannot be changed (${source._type} => ${target._type})`)
   }
 
-  const operations = diffItem(itemA, itemB, basePath, [])
+  const operations = diffItem(source, target, basePath, [])
   return serializePatches(operations).map((patchOperations, i) => ({
     patch: {
       id,
@@ -190,27 +190,27 @@ function diffItem(
 }
 
 function diffObject(
-  itemA: Record<string, unknown>,
-  itemB: Record<string, unknown>,
+  source: Record<string, unknown>,
+  target: Record<string, unknown>,
   path: Path,
   patches: Patch[],
 ) {
   const atRoot = path.length === 0
-  const aKeys = Object.keys(itemA)
+  const aKeys = Object.keys(source)
     .filter(atRoot ? isNotIgnoredKey : yes)
-    .map((key) => validateProperty(key, itemA[key], path))
+    .map((key) => validateProperty(key, source[key], path))
 
   const aKeysLength = aKeys.length
-  const bKeys = Object.keys(itemB)
+  const bKeys = Object.keys(target)
     .filter(atRoot ? isNotIgnoredKey : yes)
-    .map((key) => validateProperty(key, itemB[key], path))
+    .map((key) => validateProperty(key, target[key], path))
 
   const bKeysLength = bKeys.length
 
   // Check for deleted items
   for (let i = 0; i < aKeysLength; i++) {
     const key = aKeys[i]
-    if (!(key in itemB)) {
+    if (!(key in target)) {
       patches.push({op: 'unset', path: path.concat(key)})
     }
   }
@@ -218,35 +218,35 @@ function diffObject(
   // Check for changed items
   for (let i = 0; i < bKeysLength; i++) {
     const key = bKeys[i]
-    diffItem(itemA[key], itemB[key], path.concat([key]), patches)
+    diffItem(source[key], target[key], path.concat([key]), patches)
   }
 
   return patches
 }
 
-function diffArray(itemA: unknown[], itemB: unknown[], path: Path, patches: Patch[]) {
-  if (isUniquelyKeyed(itemA) && isUniquelyKeyed(itemB)) {
-    return diffArrayByKey(itemA, itemB, path, patches)
+function diffArray(source: unknown[], target: unknown[], path: Path, patches: Patch[]) {
+  if (isUniquelyKeyed(source) && isUniquelyKeyed(target)) {
+    return diffArrayByKey(source, target, path, patches)
   }
 
-  return diffArrayByIndex(itemA, itemB, path, patches)
+  return diffArrayByIndex(source, target, path, patches)
 }
 
-function diffArrayByIndex(itemA: unknown[], itemB: unknown[], path: Path, patches: Patch[]) {
+function diffArrayByIndex(source: unknown[], target: unknown[], path: Path, patches: Patch[]) {
   // Check for new items
-  if (itemB.length > itemA.length) {
+  if (target.length > source.length) {
     patches.push({
       op: 'insert',
       position: 'after',
       path: path.concat([-1]),
-      items: itemB.slice(itemA.length).map(nullifyUndefined),
+      items: target.slice(source.length).map(nullifyUndefined),
     })
   }
 
   // Check for deleted items
-  if (itemB.length < itemA.length) {
-    const isSingle = itemA.length - itemB.length === 1
-    const unsetItems = itemA.slice(itemB.length)
+  if (target.length < source.length) {
+    const isSingle = source.length - target.length === 1
+    const unsetItems = source.slice(target.length)
 
     // If we have unique array keys, we'll want to unset by key, as this is
     // safer in a realtime, collaborative setting
@@ -259,21 +259,21 @@ function diffArrayByIndex(itemA: unknown[], itemB: unknown[], path: Path, patche
     } else {
       patches.push({
         op: 'unset',
-        path: path.concat([isSingle ? itemB.length : [itemB.length, '']]),
+        path: path.concat([isSingle ? target.length : [target.length, '']]),
       })
     }
   }
 
   // Check for illegal array contents
-  for (let i = 0; i < itemB.length; i++) {
-    if (Array.isArray(itemB[i])) {
-      throw new DiffError('Multi-dimensional arrays not supported', path.concat(i), itemB[i])
+  for (let i = 0; i < target.length; i++) {
+    if (Array.isArray(target[i])) {
+      throw new DiffError('Multi-dimensional arrays not supported', path.concat(i), target[i])
     }
   }
 
-  const overlapping = Math.min(itemA.length, itemB.length)
-  const segmentA = itemA.slice(0, overlapping)
-  const segmentB = itemB.slice(0, overlapping)
+  const overlapping = Math.min(source.length, target.length)
+  const segmentA = source.slice(0, overlapping)
+  const segmentB = target.slice(0, overlapping)
 
   for (let i = 0; i < segmentA.length; i++) {
     diffItem(segmentA[i], nullifyUndefined(segmentB[i]), path.concat(i), patches)
@@ -494,7 +494,7 @@ function getDiffMatchPatch(source: string, target: string, path: Path): DiffMatc
 
   try {
     // Using `makePatches(string, string)` directly instead of the multi-step approach e.g.
-    // `stringifyPatches(makePatches(cleanupEfficiency(makeDiff(itemA, itemB))))`.
+    // `stringifyPatches(makePatches(cleanupEfficiency(makeDiff(source, target))))`.
     // this is because `makePatches` internally handles diff generation and
     // automatically applies both `cleanupSemantic()` and `cleanupEfficiency()`
     // when beneficial, resulting in cleaner code with near identical performance and
