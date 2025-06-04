@@ -3,9 +3,8 @@ import type {Path} from './paths.js'
 /**
  * A `set` operation
  * Replaces the current path, does not merge
- * Note: NOT a serializable mutation, see {@link SanitySetPatch} for that
  *
- * @public
+ * @internal
  */
 export interface SetPatch {
   op: 'set'
@@ -16,9 +15,8 @@ export interface SetPatch {
 /**
  * A `unset` operation
  * Unsets the entire value of the given path
- * Note: NOT a serializable mutation, see {@link SanityUnsetPatch} for that
  *
- * @public
+ * @internal
  */
 export interface UnsetPatch {
   op: 'unset'
@@ -28,9 +26,8 @@ export interface UnsetPatch {
 /**
  * A `insert` operation
  * Inserts the given items _after_ the given path
- * Note: NOT a serializable mutation, see {@link SanityInsertPatch} for that
  *
- * @public
+ * @internal
  */
 export interface InsertAfterPatch {
   op: 'insert'
@@ -41,9 +38,8 @@ export interface InsertAfterPatch {
 /**
  * A `diffMatchPatch` operation
  * Applies the given `value` (unidiff format) to the given path. Must be a string.
- * Note: NOT a serializable mutation, see {@link SanityDiffMatchPatch} for that
  *
- * @public
+ * @internal
  */
 export interface DiffMatchPatch {
   op: 'diffMatchPatch'
@@ -52,9 +48,9 @@ export interface DiffMatchPatch {
 }
 
 /**
- * A patch containing either a Sanity set, unset, insert or diffMatchPatch operation
+ * Internal patch representation used during diff generation
  *
- * @public
+ * @internal
  */
 export type Patch = SetPatch | UnsetPatch | InsertAfterPatch | DiffMatchPatch
 
@@ -64,9 +60,8 @@ export type Patch = SetPatch | UnsetPatch | InsertAfterPatch | DiffMatchPatch
  *
  * @public
  */
-export interface SanitySetPatch {
-  id: string
-  set: {[key: string]: any}
+export interface SanitySetPatchOperation {
+  set: Record<string, unknown>
 }
 
 /**
@@ -75,8 +70,7 @@ export interface SanitySetPatch {
  *
  * @public
  */
-export interface SanityUnsetPatch {
-  id: string
+export interface SanityUnsetPatchOperation {
   unset: string[]
 }
 
@@ -86,12 +80,11 @@ export interface SanityUnsetPatch {
  *
  * @public
  */
-export interface SanityInsertPatch {
-  id: string
+export interface SanityInsertPatchOperation {
   insert:
-    | {before: string; items: any[]}
-    | {after: string; items: any[]}
-    | {replace: string; items: any[]}
+    | {before: string; items: unknown[]}
+    | {after: string; items: unknown[]}
+    | {replace: string; items: unknown[]}
 }
 
 /**
@@ -100,21 +93,34 @@ export interface SanityInsertPatch {
  *
  * @public
  */
-export interface SanityDiffMatchPatch {
-  id: string
-  diffMatchPatch: {[key: string]: string}
+export interface SanityDiffMatchPatchOperation {
+  diffMatchPatch: Record<string, string>
 }
 
 /**
- * A patch containing either a set, unset, insert or diffMatchPatch operation
+ * Serializable patch operations that can be applied to a Sanity document.
  *
  * @public
  */
-export type SanityPatch =
-  | SanitySetPatch
-  | SanityUnsetPatch
-  | SanityInsertPatch
-  | SanityDiffMatchPatch
+export type SanityPatchOperations = Partial<
+  SanitySetPatchOperation &
+    SanityUnsetPatchOperation &
+    SanityInsertPatchOperation &
+    SanityDiffMatchPatchOperation
+>
+
+/**
+ * Meant to be used as the body of a {@link SanityPatchMutation}'s `patch` key.
+ *
+ * Contains additional properties to target a particular ID and optionally add
+ * an optimistic lock via [`ifRevisionID`](https://www.sanity.io/docs/content-lake/transactions#k29b2c75639d5).
+ *
+ * @public
+ */
+export interface SanityPatch extends SanityPatchOperations {
+  id: string
+  ifRevisionID?: string
+}
 
 /**
  * A mutation containing a single patch
