@@ -7,8 +7,19 @@ exports[`set/unset > basic nested changes 1`] = `
       "id": "die-hard-iii",
       "set": {
         "slug._type": "slug",
-        "slug.current": "die-hard-with-a-vengeance",
       },
+    },
+  },
+  {
+    "patch": {
+      "diffMatchPatch": {
+        "slug.current": "@@ -6,7 +6,20 @@
+ ard-
+-iii
++with-a-vengeance
+",
+      },
+      "id": "die-hard-iii",
     },
   },
 ]
@@ -26,11 +37,17 @@ exports[`set/unset > deep nested changes 1`] = `
   },
   {
     "patch": {
-      "id": "die-hard-iii",
-      "set": {
-        "products[_key=="item-1"].comparisonFields['support-level']": "advanced",
-        "products[_key=="item-1"].variants[_key=="variant-1"]['lace-type']": "slick",
+      "diffMatchPatch": {
+        "products[_key=="item-1"].comparisonFields['support-level']": "@@ -1,5 +1,8 @@
+-basic
++advanced
+",
+        "products[_key=="item-1"].variants[_key=="variant-1"]['lace-type']": "@@ -1,5 +1,5 @@
+-waxed
++slick
+",
       },
+      "id": "die-hard-iii",
     },
   },
 ]
@@ -73,8 +90,19 @@ exports[`set/unset > set + unset, nested changes 1`] = `
       "set": {
         "arr[1]": null,
         "slug._type": "slug",
-        "slug.current": "die-hard-with-a-vengeance",
       },
+    },
+  },
+  {
+    "patch": {
+      "diffMatchPatch": {
+        "slug.current": "@@ -6,7 +6,20 @@
+ ard-
+-iii
++with-a-vengeance
+",
+      },
+      "id": "die-hard-iii",
     },
   },
 ]
@@ -87,8 +115,19 @@ exports[`set/unset > simple root-level changes 1`] = `
       "id": "die-hard-iii",
       "set": {
         "rating": 4,
-        "title": "Die Hard with a Vengeance",
       },
+    },
+  },
+  {
+    "patch": {
+      "diffMatchPatch": {
+        "title": "@@ -6,5 +6,20 @@
+ ard 
+-3
++with a Vengeance
+",
+      },
+      "id": "die-hard-iii",
     },
   },
 ]

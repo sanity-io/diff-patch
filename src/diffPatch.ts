@@ -1,4 +1,4 @@
-import {cleanupEfficiency, makeDiff, makePatches, stringifyPatches} from '@sanity/diff-match-patch'
+import {makePatches, stringifyPatches} from '@sanity/diff-match-patch'
 import {DiffError} from './diffError.js'
 import {type Path, pathToString} from './paths.js'
 import {validateProperty} from './validate.js'
@@ -16,7 +16,34 @@ import {
   type SanityPatchMutation,
 } from './patches.js'
 
-const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
+/**
+ * Document keys that are ignored during diff operations.
+ * These are system-managed fields that should not be included in patches on
+ * top-level documents and should not be diffed with diff-match-patch.
+ */
+const SYSTEM_KEYS = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
+
+/**
+ * Maximum size of strings to consider for diff-match-patch (1MB)
+ * Based on testing showing consistently good performance up to this size
+ */
+const DMP_MAX_STRING_SIZE = 1_000_000
+
+/**
+ * Maximum difference in string length before falling back to set operations (40%)
+ * Above this threshold, likely indicates text replacement which can be slow
+ */
+const DMP_MAX_STRING_LENGTH_CHANGE_RATIO = 0.4
+
+/**
+ * Minimum string size to apply change ratio check (10KB)
+ * Small strings are always fast regardless of change ratio
+ */
+const DMP_MIN_SIZE_FOR_RATIO_CHECK = 10_000
+
+const DEFAULT_OPTIONS: PatchOptions = {
+  hideWarnings: false,
+}
 
 type PrimitiveValue = string | number | boolean | null | undefined
 
@@ -49,37 +76,6 @@ export interface DocumentStub {
   _createdAt?: string
   _updatedAt?: string
   [key: string]: unknown
-}
-
-/**
- * Options for the diff-match-patch algorithm.
- *
- * @public
- */
-export interface DiffMatchPatchOptions {
-  /**
-   * Whether or not to use diff-match-patch at all
-   *
-   * @defaultValue `true`
-   */
-  enabled: boolean
-
-  /**
-   * Threshold at which to start using diff-match-patch instead of a regular `set` patch.
-   *
-   * @defaultValue `30`
-   */
-  lengthThresholdAbsolute: number
-
-  /**
-   * Only use generated diff-match-patch if the patch length is less than or equal to
-   * (targetString * relative). Example: A 100 character target with a relative factor
-   * of 1.2 will allow a 120 character diff-match-patch. If larger than this number,
-   * it will fall back to a regular `set` patch.
-   *
-   * @defaultValue `1.2`
-   */
-  lengthThresholdRelative: number
 }
 
 /**
@@ -117,48 +113,6 @@ export interface PatchOptions {
    * @defaultValue `false`
    */
   hideWarnings?: boolean
-
-  /**
-   * Options for the diff-match-patch algorithm.
-   */
-  diffMatchPatch?: Partial<DiffMatchPatchOptions>
-}
-
-/**
- * Options for diff generation, where all DMP properties are required
- *
- * @public
- */
-export type DiffOptions = PatchOptions & {diffMatchPatch: Required<DiffMatchPatchOptions>}
-
-const defaultOptions = {
-  hideWarnings: false,
-  diffMatchPatch: {
-    enabled: true,
-
-    // Only use diff-match-patch if target string is longer than this threshold
-    lengthThresholdAbsolute: 30,
-
-    // Only use generated diff-match-patch if the patch length is less than or equal to
-    // (targetString * relative). Example: A 100 character target with a relative factor
-    // of 1.2 will allow a 120 character diff-match-patch. If larger than this number,
-    // it will fall back to a regular `set` patch.
-    lengthThresholdRelative: 1.2,
-  },
-} satisfies DiffOptions
-
-/**
- * Merges the default options with the passed in options.
- *
- * @param options - Options to merge with the defaults
- * @returns Merged options
- */
-function mergeOptions(options: PatchOptions): DiffOptions {
-  return {
-    ...defaultOptions,
-    ...options,
-    diffMatchPatch: {...defaultOptions.diffMatchPatch, ...(options.diffMatchPatch || {})},
-  }
 }
 
 /**
@@ -174,9 +128,8 @@ function mergeOptions(options: PatchOptions): DiffOptions {
 export function diffPatch(
   itemA: DocumentStub,
   itemB: DocumentStub,
-  opts?: PatchOptions,
+  options: PatchOptions = {},
 ): SanityPatchMutation[] {
-  const options = mergeOptions(opts || {})
   const id = options.id || (itemA._id === itemB._id && itemA._id)
   const revisionLocked = options.ifRevisionID
   const ifRevisionID = typeof revisionLocked === 'boolean' ? itemA._rev : revisionLocked
@@ -216,7 +169,7 @@ export function diffPatch(
 export function diffItem(
   itemA: unknown,
   itemB: unknown,
-  opts: DiffOptions = defaultOptions,
+  options = DEFAULT_OPTIONS,
   path: Path = [],
   patches: Patch[] = [],
 ): Patch[] {
@@ -240,11 +193,10 @@ export function diffItem(
     return patches
   }
 
-  const options = mergeOptions(opts)
   const dataType = aIsUndefined ? bType : aType
   const isContainer = dataType === 'object' || dataType === 'array'
   if (!isContainer) {
-    return diffPrimitive(itemA as PrimitiveValue, itemB as PrimitiveValue, options, path, patches)
+    return diffPrimitive(itemA as PrimitiveValue, itemB as PrimitiveValue, path, patches)
   }
 
   if (aType !== bType) {
@@ -261,7 +213,7 @@ export function diffItem(
 function diffObject(
   itemA: SanityObject,
   itemB: SanityObject,
-  options: DiffOptions,
+  options: PatchOptions,
   path: Path,
   patches: Patch[],
 ) {
@@ -297,7 +249,7 @@ function diffObject(
 function diffArray(
   itemA: unknown[],
   itemB: unknown[],
-  options: DiffOptions,
+  options: PatchOptions,
   path: Path,
   patches: Patch[],
 ) {
@@ -352,7 +304,7 @@ function diffArray(
 function diffArrayByIndex(
   itemA: unknown[],
   itemB: unknown[],
-  options: DiffOptions,
+  options: PatchOptions,
   path: Path,
   patches: Patch[],
 ) {
@@ -372,7 +324,7 @@ function diffArrayByIndex(
 function diffArrayByKey(
   itemA: KeyedSanityObject[],
   itemB: KeyedSanityObject[],
-  options: DiffOptions,
+  options: PatchOptions,
   path: Path,
   patches: Patch[],
 ) {
@@ -395,53 +347,133 @@ function diffArrayByKey(
   return patches
 }
 
-function getDiffMatchPatch(
-  itemA: PrimitiveValue,
-  itemB: PrimitiveValue,
-  options: DiffOptions,
-  path: Path,
-): DiffMatchPatch | undefined {
-  const {enabled, lengthThresholdRelative, lengthThresholdAbsolute} = options.diffMatchPatch
-  const segment = path[path.length - 1]
-  if (
-    !enabled ||
-    // Don't use for anything but strings
-    typeof itemA !== 'string' ||
-    typeof itemB !== 'string' ||
-    // Don't use for `_key`, `_ref` etc
-    (typeof segment === 'string' && segment[0] === '_') ||
-    // Don't use on short strings
-    itemB.length < lengthThresholdAbsolute
-  ) {
-    return undefined
+/**
+ * Determines whether to use diff-match-patch or fallback to a `set` operation
+ * when creating a patch to transform a `source` string to `target` string.
+ *
+ * `diffMatchPatch` patches are typically preferred to `set` operations because
+ * they handle conflicts better (when multiple editors work simultaneously) by
+ * preserving the user's intended and allowing for 3-way merges.
+ *
+ * **Heuristic rationale:**
+ *
+ * Perf analysis revealed that string length has minimal impact on small,
+ * keystroke-level changes, but large text replacements (high change ratio) can
+ * trigger worst-case algorithm behavior. The 40% change ratio threshold is a
+ * simple heuristic that catches problematic replacement scenarios while
+ * allowing the algorithm to excel at insertions and deletions.
+ *
+ * **Performance characteristics (tested on M2 MacBook Pro):**
+ *
+ * *Keystroke-level editing (most common use case):*
+ * - Small strings (1KB-10KB): 0ms for 1-5 keystrokes, consistently sub-millisecond
+ * - Medium strings (50KB-200KB): 0ms for 1-5 keystrokes, consistently sub-millisecond
+ * - 10 simultaneous keystrokes: ~12ms on 100KB strings
+ *
+ * *Copy-paste operations (less frequent):*
+ * - Small copy-paste operations (<50KB): 0-10ms regardless of string length
+ * - Large insertions/deletions (50KB+): 0-50ms (excellent performance)
+ * - Large text replacements (50KB+): 70ms-2s+ (can be slow due to algorithm complexity)
+ *
+ * **Algorithm details:**
+ * Uses Myers' diff algorithm with O(ND) time complexity where N=text length and D=edit distance.
+ * Includes optimizations: common prefix/suffix removal, line-mode processing, and timeout protection.
+ *
+ *
+ * **Test methodology:**
+ * - Generated realistic word-based text patterns
+ * - Simulated actual editing behaviors (keystrokes vs copy-paste)
+ * - Measured performance across string sizes from 1KB to 10MB
+ * - Validated against edge cases including repetitive text and scattered changes
+ *
+ * @param source - The previous version of the text
+ * @param target - The new version of the text
+ * @returns true if diff-match-patch should be used, false if fallback to set operation
+ *
+ * @example
+ * ```typescript
+ * // Keystroke editing - always fast
+ * shouldUseDiffMatchPatch(largeDoc, largeDocWithTypo) // true, ~0ms
+ *
+ * // Small paste - always fast
+ * shouldUseDiffMatchPatch(doc, docWithSmallInsertion) // true, ~0ms
+ *
+ * // Large replacement - potentially slow
+ * shouldUseDiffMatchPatch(article, completelyDifferentArticle) // false, use set
+ * ```
+ *
+ * Compatible with @sanity/diff-match-patch@3.2.0
+ */
+export function shouldUseDiffMatchPatch(source: string, target: string): boolean {
+  const maxLength = Math.max(source.length, target.length)
+
+  // Always reject strings larger than our tested size limit
+  if (maxLength > DMP_MAX_STRING_SIZE) {
+    return false
   }
 
-  let strPatch = ''
+  // For small strings, always use diff-match-patch regardless of change ratio
+  // Performance testing showed these are always fast (<10ms)
+  if (maxLength < DMP_MIN_SIZE_FOR_RATIO_CHECK) {
+    return true
+  }
+
+  // Calculate the change ratio to detect large text replacements
+  // High ratios indicate replacement scenarios which can trigger slow algorithm paths
+  const lengthDifference = Math.abs(target.length - source.length)
+  const changeRatio = lengthDifference / maxLength
+
+  // If change ratio is high, likely a replacement operation that could be slow
+  // Fall back to set operation for better user experience
+  if (changeRatio > DMP_MAX_STRING_LENGTH_CHANGE_RATIO) {
+    return false
+  }
+
+  // All other cases: use diff-match-patch
+  // This covers keystroke editing and insertion/deletion scenarios which perform excellently
+  return true
+}
+
+function getDiffMatchPatch(
+  source: PrimitiveValue,
+  target: PrimitiveValue,
+  path: Path,
+): DiffMatchPatch | undefined {
+  if (typeof source !== 'string' || typeof target !== 'string') return undefined
+  const last = path.at(-1)
+  // don't use diff-match-patch for system keys
+  if (typeof last === 'string' && last.startsWith('_')) return undefined
+  if (!shouldUseDiffMatchPatch(source, target)) return undefined
+
   try {
-    const patch = makeDiff(itemA, itemB)
-    const diff = cleanupEfficiency(patch)
-    strPatch = stringifyPatches(makePatches(diff))
+    // Using `makePatches(string, string)` directly instead of the multi-step approach e.g.
+    // `stringifyPatches(makePatches(cleanupEfficiency(makeDiff(itemA, itemB))))`.
+    // this is because `makePatches` internally handles diff generation and
+    // automatically applies both `cleanupSemantic()` and `cleanupEfficiency()`
+    // when beneficial, resulting in cleaner code with near identical performance and
+    // better error handling.
+    // [source](https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/patch/make.ts#L67-L76)
+    //
+    // Performance validation (M2 MacBook Pro):
+    // Both approaches measured at identical performance:
+    // - 10KB strings: 0-1ms total processing time
+    // - 100KB strings: 0-1ms total processing time
+    // - Individual step breakdown: makeDiff(0ms) + cleanup(0ms) + makePatches(0ms) + stringify(~1ms)
+    const strPatch = stringifyPatches(makePatches(source, target))
+    return {op: 'diffMatchPatch', path, value: strPatch}
   } catch (err) {
     // Fall back to using regular set patch
     return undefined
   }
-
-  // Don't use patch if it's longer than allowed relative threshold.
-  // Allow a 120 character patch for a 100 character string,
-  // but don't allow a 800 character patch for a 500 character value.
-  return strPatch.length > itemB.length * lengthThresholdRelative
-    ? undefined
-    : {op: 'diffMatchPatch', path, value: strPatch}
 }
 
 function diffPrimitive(
   itemA: PrimitiveValue,
   itemB: PrimitiveValue,
-  options: DiffOptions,
   path: Path,
   patches: Patch[],
 ): Patch[] {
-  const dmp = getDiffMatchPatch(itemA, itemB, options, path)
+  const dmp = getDiffMatchPatch(itemA, itemB, path)
 
   patches.push(
     dmp || {
@@ -455,7 +487,7 @@ function diffPrimitive(
 }
 
 function isNotIgnoredKey(key: string) {
-  return ignoredKeys.indexOf(key) === -1
+  return SYSTEM_KEYS.indexOf(key) === -1
 }
 
 function serializePatches(

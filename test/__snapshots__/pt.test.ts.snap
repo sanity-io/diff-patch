@@ -13,10 +13,13 @@ exports[`portable text > undo bold change 1`] = `
   },
   {
     "patch": {
-      "id": "die-hard-iii",
-      "set": {
-        "portableText[_key=="920ebbba9ada"].children[_key=="80847f72abfd"].text": "La oss begynne med en empty slate.",
+      "diffMatchPatch": {
+        "portableText[_key=="920ebbba9ada"].children[_key=="80847f72abfd"].text": "@@ -15,8 +15,20 @@
+  med en 
++empty slate.
+",
       },
+      "id": "die-hard-iii",
     },
   },
 ]
