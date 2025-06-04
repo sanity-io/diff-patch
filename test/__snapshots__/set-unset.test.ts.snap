@@ -29,14 +29,6 @@ exports[`set/unset > deep nested changes 1`] = `
 [
   {
     "patch": {
-      "id": "die-hard-iii",
-      "unset": [
-        "products[_key=="item-1"].variants[_key=="variant-2"]['lace-type']",
-      ],
-    },
-  },
-  {
-    "patch": {
       "diffMatchPatch": {
         "products[_key=="item-1"].comparisonFields['support-level']": "@@ -1,5 +1,8 @@
 -basic
@@ -48,6 +40,14 @@ exports[`set/unset > deep nested changes 1`] = `
 ",
       },
       "id": "die-hard-iii",
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "unset": [
+        "products[_key=="item-1"].variants[_key=="variant-2"]['lace-type']",
+      ],
     },
   },
 ]
@@ -88,7 +88,6 @@ exports[`set/unset > set + unset, nested changes 1`] = `
     "patch": {
       "id": "die-hard-iii",
       "set": {
-        "arr[1]": null,
         "slug._type": "slug",
       },
     },
@@ -105,19 +104,19 @@ exports[`set/unset > set + unset, nested changes 1`] = `
       "id": "die-hard-iii",
     },
   },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "arr[1]": null,
+      },
+    },
+  },
 ]
 `;
 
 exports[`set/unset > simple root-level changes 1`] = `
 [
-  {
-    "patch": {
-      "id": "die-hard-iii",
-      "set": {
-        "rating": 4,
-      },
-    },
-  },
   {
     "patch": {
       "diffMatchPatch": {
@@ -128,6 +127,14 @@ exports[`set/unset > simple root-level changes 1`] = `
 ",
       },
       "id": "die-hard-iii",
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "rating": 4,
+      },
     },
   },
 ]

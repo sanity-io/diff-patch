@@ -4,14 +4,6 @@ exports[`diff match patch > does not use dmp for "privates" (underscore-prefixed
 [
   {
     "patch": {
-      "id": "die-hard-ix",
-      "set": {
-        "reviews[_key=="abc123"]._type": "reviewFromUserRepresentingMovieOrNovelOrSomethingVeryLongThatCanBeShownAsStars",
-      },
-    },
-  },
-  {
-    "patch": {
       "diffMatchPatch": {
         "useDmp": "@@ -7,8 +7,72 @@
  FromUser
@@ -19,6 +11,14 @@ exports[`diff match patch > does not use dmp for "privates" (underscore-prefixed
 ",
       },
       "id": "die-hard-ix",
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-ix",
+      "set": {
+        "reviews[_key=="abc123"]._type": "reviewFromUserRepresentingMovieOrNovelOrSomethingVeryLongThatCanBeShownAsStars",
+      },
     },
   },
 ]
