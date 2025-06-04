@@ -1,4 +1,4 @@
-import type {Path} from './paths.js'
+import type {KeyedSanityObject, Path} from './paths.js'
 
 /**
  * A `set` operation
@@ -29,9 +29,10 @@ export interface UnsetPatch {
  *
  * @internal
  */
-export interface InsertAfterPatch {
+export interface InsertPatch {
   op: 'insert'
-  after: Path
+  position: 'before' | 'after' | 'replace'
+  path: Path
   items: any[]
 }
 
@@ -48,11 +49,25 @@ export interface DiffMatchPatch {
 }
 
 /**
+ * A `reorder` operation used to ...
+ *
+ * Note: NOT a serializable mutation.
+ *
+ * @public
+ */
+export interface ReorderPatch {
+  op: 'reorder'
+  path: Path
+  snapshot: KeyedSanityObject[]
+  reorders: {sourceKey: string; targetKey: string}[]
+}
+
+/**
  * Internal patch representation used during diff generation
  *
  * @internal
  */
-export type Patch = SetPatch | UnsetPatch | InsertAfterPatch | DiffMatchPatch
+export type Patch = SetPatch | UnsetPatch | InsertPatch | DiffMatchPatch | ReorderPatch
 
 /**
  * A Sanity `set` patch mutation operation

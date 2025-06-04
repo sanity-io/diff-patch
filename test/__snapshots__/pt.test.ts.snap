@@ -4,15 +4,6 @@ exports[`portable text > undo bold change 1`] = `
 [
   {
     "patch": {
-      "id": "die-hard-iii",
-      "unset": [
-        "portableText[_key=="920ebbba9ada"].children[_key=="1bda8032e34c"]",
-        "portableText[_key=="920ebbba9ada"].children[_key=="cb0568a8e746"]",
-      ],
-    },
-  },
-  {
-    "patch": {
       "diffMatchPatch": {
         "portableText[_key=="920ebbba9ada"].children[_key=="80847f72abfd"].text": "@@ -15,8 +15,20 @@
   med en 
@@ -20,6 +11,15 @@ exports[`portable text > undo bold change 1`] = `
 ",
       },
       "id": "die-hard-iii",
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "unset": [
+        "portableText[_key=="920ebbba9ada"].children[_key=="1bda8032e34c"]",
+        "portableText[_key=="920ebbba9ada"].children[_key=="cb0568a8e746"]",
+      ],
     },
   },
 ]
