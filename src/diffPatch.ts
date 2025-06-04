@@ -4,16 +4,14 @@ import {type Path, pathToString} from './paths.js'
 import {validateProperty} from './validate.js'
 import {
   type Patch,
-  type SetPatch,
   type UnsetPatch,
-  type InsertAfterPatch,
   type DiffMatchPatch,
-  type SanityInsertPatch,
-  type SanityPatch,
-  type SanitySetPatch,
-  type SanityUnsetPatch,
-  type SanityDiffMatchPatch,
   type SanityPatchMutation,
+  SanityPatchOperations,
+  SanitySetPatchOperation,
+  SanityUnsetPatchOperation,
+  SanityInsertPatchOperation,
+  SanityDiffMatchPatchOperation,
 } from './patches.js'
 
 /**
@@ -140,27 +138,35 @@ export function diffPatch(
   }
 
   const operations = diffItem(itemA, itemB, basePath, [])
-  return serializePatches(operations, {id, ifRevisionID: revisionLocked ? ifRevisionID : undefined})
+  return serializePatches(operations).map((patchOperations, i) => ({
+    patch: {
+      id,
+      // only add `ifRevisionID` to the first patch
+      ...(i === 0 && ifRevisionID && {ifRevisionID}),
+      ...patchOperations,
+    },
+  }))
 }
 
 /**
- * Diffs two items and returns an array of patches.
- * Note that this is different from `diffPatch`, which generates _mutations_.
+ * Generates an array of patch operation objects for Sanity, based on the
+ * differences between the two passed values
  *
- * @param itemA - The first item to compare
- * @param itemB - The second item to compare
- * @param opts - Options for the diff generation
- * @param path - Path to the current item
- * @param patches - Array of patches to append the results to. Note that this is MUTATED.
- * @returns Array of patches
+ * @param source - The source value to start off with
+ * @param target - The target value that the patch operations will aim to create
+ * @param basePath - An optional path that will be prefixed to all subsequent patch operations
+ * @returns Array of mutations
  * @public
  */
-export function diffItem(
-  itemA: unknown,
-  itemB: unknown,
-  path: Path = [],
-  patches: Patch[] = [],
-): Patch[] {
+export function diffValue(
+  source: unknown,
+  target: unknown,
+  basePath: Path = [],
+): SanityPatchOperations[] {
+  return serializePatches(diffItem(source, target, basePath))
+}
+
+function diffItem(itemA: unknown, itemB: unknown, path: Path = [], patches: Patch[] = []): Patch[] {
   if (itemA === itemB) {
     return patches
   }
@@ -451,65 +457,62 @@ function isNotIgnoredKey(key: string) {
   return SYSTEM_KEYS.indexOf(key) === -1
 }
 
-function serializePatches(
-  patches: Patch[],
-  options: {id: string; ifRevisionID?: string},
-): SanityPatchMutation[] {
+// mutually exclusive operations
+type SanityPatchOperation =
+  | SanitySetPatchOperation
+  | SanityUnsetPatchOperation
+  | SanityInsertPatchOperation
+  | SanityDiffMatchPatchOperation
+
+function serializePatches(patches: Patch[]): SanityPatchOperation[] {
   if (patches.length === 0) {
     return []
   }
 
-  const {id, ifRevisionID} = options
-  const set = patches.filter((patch): patch is SetPatch => patch.op === 'set')
-  const unset = patches.filter((patch): patch is UnsetPatch => patch.op === 'unset')
-  const insert = patches.filter((patch): patch is InsertAfterPatch => patch.op === 'insert')
-  const dmp = patches.filter((patch): patch is DiffMatchPatch => patch.op === 'diffMatchPatch')
+  const set = patches.filter((patch) => patch.op === 'set')
+  const unset = patches.filter((patch) => patch.op === 'unset')
+  const insert = patches.filter((patch) => patch.op === 'insert')
+  const dmp = patches.filter((patch) => patch.op === 'diffMatchPatch')
 
   const withSet =
     set.length > 0 &&
-    set.reduce(
-      (patch: SanitySetPatch, item: SetPatch) => {
+    set.reduce<SanitySetPatchOperation>(
+      (patch, item) => {
         const path = pathToString(item.path)
         patch.set[path] = item.value
         return patch
       },
-      {id, set: {}},
+      {set: {}},
     )
 
   const withUnset =
     unset.length > 0 &&
-    unset.reduce(
-      (patch: SanityUnsetPatch, item: UnsetPatch) => {
+    unset.reduce<SanityUnsetPatchOperation>(
+      (patch, item) => {
         const path = pathToString(item.path)
         patch.unset.push(path)
         return patch
       },
-      {id, unset: []},
+      {unset: []},
     )
 
-  const withInsert = insert.reduce((acc: SanityInsertPatch[], item: InsertAfterPatch) => {
+  const withInsert = insert.reduce<SanityInsertPatchOperation[]>((acc, item) => {
     const after = pathToString(item.after)
-    return acc.concat({id, insert: {after, items: item.items}})
+    return acc.concat({insert: {after, items: item.items}})
   }, [])
 
   const withDmp =
     dmp.length > 0 &&
-    dmp.reduce(
-      (patch: SanityDiffMatchPatch, item: DiffMatchPatch) => {
+    dmp.reduce<SanityDiffMatchPatchOperation>(
+      (patch, item) => {
         const path = pathToString(item.path)
         patch.diffMatchPatch[path] = item.value
         return patch
       },
-      {id, diffMatchPatch: {}},
+      {diffMatchPatch: {}},
     )
 
-  const patchSet: SanityPatch[] = [withUnset, withSet, withDmp, ...withInsert].filter(
-    (item): item is SanityPatch => item !== false,
-  )
-
-  return patchSet.map((patch, i) => ({
-    patch: ifRevisionID && i === 0 ? {...patch, ifRevisionID} : patch,
-  }))
+  return [withUnset, withSet, withDmp, ...withInsert].filter((i) => i !== false)
 }
 
 function isUniquelyKeyed(arr: unknown[]): arr is KeyedSanityObject[] {
