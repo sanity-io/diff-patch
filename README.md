@@ -243,16 +243,16 @@ When comparing strings, the library attempts to use [diff-match-patch](https://w
 
 **Automatic selection criteria:**
 
-- **Document size limit**: Documents larger than 1MB use `set` operations
-- **Change ratio threshold**: If >40% of text changes, uses `set` (indicates replacement vs. editing)
-- **Small document optimization**: Documents <10KB always use diff-match-patch
-- **System key protection**: Properties starting with `_` always use `set` operations
+- **String size limit**: Strings larger than 1MB use `set` operations
+- **Change ratio threshold**: If >40% of text changes (determined by simple string length difference), uses `set` (indicates replacement vs. editing)
+- **Small text optimization**: Strings <10KB will always use diff-match-patch
+- **System key protection**: Properties starting with `_` (e.g. `_type`, `_key`) always use `set` operations as these are not typically edited by users
 
 **Performance rationale:**
 
 These thresholds are based on performance testing of the underlying `@sanity/diff-match-patch` library on an M2 MacBook Pro:
 
-- **Keystroke editing**: 0ms for typical edits, sub-millisecond even on large documents
+- **Keystroke editing**: 0ms for typical edits, sub-millisecond even on large strings
 - **Small insertions/pastes**: 0-10ms for content <50KB
 - **Large insertions/deletions**: 0-50ms for content >50KB
 - **Text replacements**: Can be 70ms-2s+ due to algorithm complexity
@@ -261,7 +261,7 @@ The 40% change ratio threshold catches problematic replacement scenarios while a
 
 **Migration from v5:**
 
-Version 5 allowed configuring diff-match-patch behavior with `lengthThresholdAbsolute` and `lengthThresholdRelative` options. Version 6 removes these options in favor of tested defaults that provide consistent performance across real-world editing patterns.
+Version 5 allowed configuring diff-match-patch behavior with `lengthThresholdAbsolute` and `lengthThresholdRelative` options. Version 6 removes these options in favor of tested defaults that provide consistent performance across real-world editing patterns. This allows us to change the behavior of this over time to better meet performance needs.
 
 ### Array Handling
 
@@ -277,7 +277,7 @@ const cleanArray = array.filter((item) => typeof item !== 'undefined')
 
 ### System Keys
 
-The following top-level document keys are ignored when diffing as they are managed by Sanity:
+The following keys are ignored at the root of the document when diffing a document as they are managed by Sanity:
 
 - `_id`
 - `_type`
