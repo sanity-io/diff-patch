@@ -7,11 +7,11 @@ import {
   type UnsetPatch,
   type DiffMatchPatch,
   type SanityPatchMutation,
-  SanityPatchOperations,
-  SanitySetPatchOperation,
-  SanityUnsetPatchOperation,
-  SanityInsertPatchOperation,
-  SanityDiffMatchPatchOperation,
+  type SanityPatchOperations,
+  type SanitySetPatchOperation,
+  type SanityUnsetPatchOperation,
+  type SanityInsertPatchOperation,
+  type SanityDiffMatchPatchOperation,
 } from './patches.js'
 
 /**
