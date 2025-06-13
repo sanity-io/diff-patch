@@ -18,8 +18,19 @@ exports[`module api > can include ifRevisionID 1`] = `
       "set": {
         "arr[1]": null,
         "slug._type": "slug",
-        "slug.current": "die-hard-with-a-vengeance",
       },
+    },
+  },
+  {
+    "patch": {
+      "diffMatchPatch": {
+        "slug.current": "@@ -6,7 +6,20 @@
+ ard-
+-iii
++with-a-vengeance
+",
+      },
+      "id": "die-hard-iii",
     },
   },
 ]
@@ -42,8 +53,19 @@ exports[`module api > can pass different document ID 1`] = `
       "set": {
         "arr[1]": null,
         "slug._type": "slug",
-        "slug.current": "die-hard-with-a-vengeance",
       },
+    },
+  },
+  {
+    "patch": {
+      "diffMatchPatch": {
+        "slug.current": "@@ -6,7 +6,20 @@
+ ard-
+-iii
++with-a-vengeance
+",
+      },
+      "id": "moop",
     },
   },
 ]

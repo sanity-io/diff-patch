@@ -71,10 +71,14 @@ exports[`primitive arrays > remove from middle (single) 1`] = `
   },
   {
     "patch": {
-      "id": "die-hard-iii",
-      "set": {
-        "characters[1]": "Zeus Carver",
+      "diffMatchPatch": {
+        "characters[1]": "@@ -1,12 +1,11 @@
+-Simon Grub
++Zeus Carv
+ er
+",
       },
+      "id": "die-hard-iii",
     },
   },
 ]

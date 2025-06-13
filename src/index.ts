@@ -15,6 +15,6 @@ export type {
   UnsetPatch,
 } from './patches.js'
 
-export type {DiffMatchPatchOptions, DiffOptions, DocumentStub, PatchOptions} from './diffPatch.js'
+export type {DocumentStub, PatchOptions} from './diffPatch.js'
 
 export type {Path, PathSegment} from './paths.js'

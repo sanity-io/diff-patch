@@ -10,12 +10,19 @@ describe('diff data types', () => {
         patch: {
           id: dataTypes.a._id,
           set: {
-            title: 'Die Hard with a Vengeance',
-            rating: 4.24,
             isFeatured: false,
-            'characters[0]': 'Simon Gruber',
-            'slug.current': 'die-hard-with-a-vengeance',
+            rating: 4.24,
             year: 1995,
+          },
+        },
+      },
+      {
+        patch: {
+          id: 'die-hard-iii',
+          diffMatchPatch: {
+            title: '@@ -6,5 +6,20 @@\n ard \n-3\n+with a Vengeance\n',
+            'characters[0]': '@@ -1,12 +1,12 @@\n-John McClane\n+Simon Gruber\n',
+            'slug.current': '@@ -6,7 +6,20 @@\n ard-\n-iii\n+with-a-vengeance\n',
           },
         },
       },
@@ -65,8 +72,13 @@ describe('diff data types', () => {
             number: 1337,
             'object.b12': '12',
             'object.f13': null,
-            string: 'bar',
           },
+        },
+      },
+      {
+        patch: {
+          id: 'abc123',
+          diffMatchPatch: {string: '@@ -1,3 +1,3 @@\n-foo\n+bar\n'},
         },
       },
     ])

@@ -8,8 +8,19 @@ exports[`ifRevisionID > can apply revision constraint (inferred from document) 1
       "ifRevisionID": "datrev",
       "set": {
         "rating": 4,
-        "title": "Die Hard with a Vengeance",
       },
+    },
+  },
+  {
+    "patch": {
+      "diffMatchPatch": {
+        "title": "@@ -6,5 +6,20 @@
+ ard 
+-3
++with a Vengeance
+",
+      },
+      "id": "die-hard-iii",
     },
   },
 ]
@@ -23,8 +34,19 @@ exports[`ifRevisionID > can apply revision constraint (uppercase) 1`] = `
       "ifRevisionID": "abc123",
       "set": {
         "rating": 4,
-        "title": "Die Hard with a Vengeance",
       },
+    },
+  },
+  {
+    "patch": {
+      "diffMatchPatch": {
+        "title": "@@ -6,5 +6,20 @@
+ ard 
+-3
++with a Vengeance
+",
+      },
+      "id": "die-hard-iii",
     },
   },
 ]

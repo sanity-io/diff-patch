@@ -65,10 +65,13 @@ exports[`diff match patch > respects absolute length threshold 1`] = `
 [
   {
     "patch": {
-      "id": "die-hard-ix",
-      "set": {
-        "its": "also short",
+      "diffMatchPatch": {
+        "its": "@@ -1,5 +1,10 @@
++also 
+ short
+",
       },
+      "id": "die-hard-ix",
     },
   },
 ]
@@ -96,10 +99,79 @@ exports[`diff match patch > respects relative length threshold 1`] = `
 [
   {
     "patch": {
-      "id": "die-hard-ix",
-      "set": {
-        "synopsis": "When a sack of coffee explodes at the Ultra Gnoch asteroid, a man calling himself "Ziltoid" phones Major Case Unit Inspector Mark Cimino at the Tellus police station and claims responsibility for the sack. He orders suspended police officer Lt. John McClane to travel to the asteroid, in his underwear. McClane is flown there by Cimino and three other officers. Ultra Gnoch miner Dave Young spots McClane and tries to get him off the asteroid before the coffee bugs infiltrate the asteroid, but a gang of underpant gnomes attacks McClane and Young, who barely escape.",
+      "diffMatchPatch": {
+        "synopsis": "@@ -4,20 +4,21 @@
+ n a 
+-confetti cak
++sack of coffe
+ e ex
+@@ -35,38 +35,28 @@
+ the 
+-Bonwit Teller department store
++Ultra Gnoch asteroid
+ , a 
+@@ -80,13 +80,15 @@
+ lf %22
+-Simon
++Ziltoid
+ %22 ph
+@@ -122,27 +122,34 @@
+ tor 
+-Walter Cobb
++Mark Cimino
+  at the 
++Tellus 
+ poli
+@@ -197,16 +197,12 @@
+ the 
+-confetti
++sack
+ . He
+@@ -258,41 +258,30 @@
+  to 
+-walk through the middle of Harlem
++travel to the asteroid
+ , in
+@@ -311,13 +311,12 @@
+  is 
+-drive
++flow
+ n th
+@@ -327,11 +327,13 @@
+ by C
+-obb
++imino
+  and
+@@ -359,38 +359,36 @@
+ rs. 
+-Harlem electrician Zeus Carver
++Ultra Gnoch miner Dave Young
+  spo
+@@ -431,33 +431,62 @@
+ the 
++a
+ st
+-reet
++eroid
+  before 
++t
+ he 
+-is kille
++coffee bugs infiltrate the asteroi
+ d, b
+@@ -502,13 +502,23 @@
+  of 
+-youth
++underpant gnome
+ s at
+@@ -539,14 +539,13 @@
+ and 
+-Carver
++Young
+ , wh
+",
       },
+      "id": "die-hard-ix",
     },
   },
 ]

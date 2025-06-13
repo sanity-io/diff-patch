@@ -25,7 +25,7 @@ describe('module api', () => {
 
   test('does not throw if ids do not match and id is provided', () => {
     const b = {...setAndUnset.b, _id: 'zing'}
-    expect(diffPatch(setAndUnset.a, b, {id: 'yup', hideWarnings: true})).toHaveLength(2)
+    expect(diffPatch(setAndUnset.a, b, {id: 'yup', hideWarnings: true})).toHaveLength(3)
   })
 
   test('pathToString throws on invalid path segments', () => {

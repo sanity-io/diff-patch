@@ -46,10 +46,15 @@ exports[`object arrays > change item 1`] = `
 [
   {
     "patch": {
-      "id": "die-hard-iii",
-      "set": {
-        "characters[_key=="simon"].name": "Simon Grüber",
+      "diffMatchPatch": {
+        "characters[_key=="simon"].name": "@@ -5,8 +5,9 @@
+ n Gr
+-u
++%C3%BC
+ ber
+",
       },
+      "id": "die-hard-iii",
     },
   },
 ]
@@ -97,8 +102,19 @@ exports[`object arrays > remove from middle (single) 1`] = `
       "id": "die-hard-iii",
       "set": {
         "characters[1]._key": "zeus",
-        "characters[1].name": "Zeus Carver",
       },
+    },
+  },
+  {
+    "patch": {
+      "diffMatchPatch": {
+        "characters[1].name": "@@ -1,12 +1,11 @@
+-Simon Grub
++Zeus Carv
+ er
+",
+      },
+      "id": "die-hard-iii",
     },
   },
 ]
