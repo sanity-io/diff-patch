@@ -8,26 +8,26 @@ import * as simple from './fixtures/simple'
 
 describe('set/unset', () => {
   test('simple root-level changes', () => {
-    expect(diffPatch(simple.a, simple.b, {hideWarnings: true})).toMatchSnapshot()
+    expect(diffPatch(simple.a, simple.b)).toMatchSnapshot()
   })
 
   test('basic nested changes', () => {
-    expect(diffPatch(nested.a, nested.b, {hideWarnings: true})).toMatchSnapshot()
+    expect(diffPatch(nested.a, nested.b)).toMatchSnapshot()
   })
 
   test('set + unset, nested changes', () => {
-    expect(diffPatch(setAndUnset.a, setAndUnset.b, {hideWarnings: true})).toMatchSnapshot()
+    expect(diffPatch(setAndUnset.a, setAndUnset.b)).toMatchSnapshot()
   })
 
   test('set + unset, image example', () => {
-    expect(diffPatch(image.a, image.b, {hideWarnings: true})).toMatchSnapshot()
+    expect(diffPatch(image.a, image.b)).toMatchSnapshot()
   })
 
   test('deep nested changes', () => {
-    expect(diffPatch(deep.a, deep.b, {hideWarnings: true})).toMatchSnapshot()
+    expect(diffPatch(deep.a, deep.b)).toMatchSnapshot()
   })
 
   test('no diff', () => {
-    expect(diffPatch(nested.a, nested.a, {hideWarnings: true})).toEqual([])
+    expect(diffPatch(nested.a, nested.a)).toEqual([])
   })
 })
