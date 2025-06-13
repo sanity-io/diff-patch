@@ -40,8 +40,6 @@ const DMP_MAX_STRING_LENGTH_CHANGE_RATIO = 0.4
  */
 const DMP_MIN_SIZE_FOR_RATIO_CHECK = 10_000
 
-type PrimitiveValue = string | number | boolean | null | undefined
-
 /**
  * An object (record) that _may_ have a `_key` property
  *
@@ -157,45 +155,46 @@ export function diffValue(
   return serializePatches(diffItem(source, target, basePath))
 }
 
-function diffItem(itemA: unknown, itemB: unknown, path: Path = [], patches: Patch[] = []): Patch[] {
-  if (itemA === itemB) {
+function diffItem(
+  source: unknown,
+  target: unknown,
+  path: Path = [],
+  patches: Patch[] = [],
+): Patch[] {
+  if (source === target) {
     return patches
   }
 
-  const aType = Array.isArray(itemA) ? 'array' : typeof itemA
-  const bType = Array.isArray(itemB) ? 'array' : typeof itemB
-
-  const aIsUndefined = aType === 'undefined'
-  const bIsUndefined = bType === 'undefined'
-
-  if (aIsUndefined && !bIsUndefined) {
-    patches.push({op: 'set', path, value: itemB})
+  if (typeof source === 'string' && typeof target === 'string') {
+    diffString(source, target, path, patches)
     return patches
   }
 
-  if (!aIsUndefined && bIsUndefined) {
+  if (Array.isArray(source) && Array.isArray(target)) {
+    diffArray(source, target, path, patches)
+    return patches
+  }
+
+  if (isRecord(source) && isRecord(target)) {
+    diffObject(source, target, path, patches)
+    return patches
+  }
+
+  if (target === undefined) {
     patches.push({op: 'unset', path})
     return patches
   }
 
-  const dataType = aIsUndefined ? bType : aType
-  const isContainer = dataType === 'object' || dataType === 'array'
-  if (!isContainer) {
-    return diffPrimitive(itemA as PrimitiveValue, itemB as PrimitiveValue, path, patches)
-  }
-
-  if (aType !== bType) {
-    // Array => Object / Object => Array
-    patches.push({op: 'set', path, value: itemB})
-    return patches
-  }
-
-  return dataType === 'array'
-    ? diffArray(itemA as unknown[], itemB as unknown[], path, patches)
-    : diffObject(itemA as object, itemB as object, path, patches)
+  patches.push({op: 'set', path, value: target})
+  return patches
 }
 
-function diffObject(itemA: SanityObject, itemB: SanityObject, path: Path, patches: Patch[]) {
+function diffObject(
+  itemA: Record<string, unknown>,
+  itemB: Record<string, unknown>,
+  path: Path,
+  patches: Patch[],
+) {
   const atRoot = path.length === 0
   const aKeys = Object.keys(itemA)
     .filter(atRoot ? isNotIgnoredKey : yes)
@@ -487,12 +486,7 @@ export function shouldUseDiffMatchPatch(source: string, target: string): boolean
   return true
 }
 
-function getDiffMatchPatch(
-  source: PrimitiveValue,
-  target: PrimitiveValue,
-  path: Path,
-): DiffMatchPatch | undefined {
-  if (typeof source !== 'string' || typeof target !== 'string') return undefined
+function getDiffMatchPatch(source: string, target: string, path: Path): DiffMatchPatch | undefined {
   const last = path.at(-1)
   // don't use diff-match-patch for system keys
   if (typeof last === 'string' && last.startsWith('_')) return undefined
@@ -520,22 +514,9 @@ function getDiffMatchPatch(
   }
 }
 
-function diffPrimitive(
-  itemA: PrimitiveValue,
-  itemB: PrimitiveValue,
-  path: Path,
-  patches: Patch[],
-): Patch[] {
-  const dmp = getDiffMatchPatch(itemA, itemB, path)
-
-  patches.push(
-    dmp || {
-      op: 'set',
-      path,
-      value: itemB,
-    },
-  )
-
+function diffString(source: string, target: string, path: Path, patches: Patch[]) {
+  const dmp = getDiffMatchPatch(source, target, path)
+  patches.push(dmp ?? {op: 'set', path, value: target})
   return patches
 }
 
@@ -674,6 +655,10 @@ function getIndexForKey(keyedArray: KeyedSanityObject[], targetKey: string) {
   keyToIndexCache.set(keyedArray, keyToIndexMapping)
 
   return keyToIndexMapping[targetKey]
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && !!value && !Array.isArray(value)
 }
 
 /**
