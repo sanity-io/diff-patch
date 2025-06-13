@@ -2,142 +2,295 @@
 
 [![npm version](https://img.shields.io/npm/v/@sanity/diff-patch.svg?style=flat-square)](https://www.npmjs.com/package/@sanity/diff-patch)[![npm bundle size](https://img.shields.io/bundlephobia/minzip/@sanity/diff-patch?style=flat-square)](https://bundlephobia.com/result?p=@sanity/diff-patch)[![npm weekly downloads](https://img.shields.io/npm/dw/@sanity/diff-patch.svg?style=flat-square)](https://www.npmjs.com/package/@sanity/diff-patch)
 
-Generates a set of [Sanity](https://www.sanity.io/) patch mutations needed to change an item (usually a document) from one shape to another.
+Generate Sanity patch mutations by comparing two documents or values. This library creates conflict-resistant patches designed for collaborative editing environments where multiple users may be editing the same document simultaneously.
 
-Most values will become simple `set`, `unset` or `insert` operations, but it will also (by default) try to use [diff-match-patch](https://www.sanity.io/docs/http-patches#diffmatchpatch-aTbJhlAJ) for strings ([read more](#diff-match-patch)).
+## Objectives
 
-An `ifRevisionID` constraint can be given to generate patches that include this revision as a safeguard, to prevent modifying documents that has changed since the diff was generated.
+- **Conflict-resistant patches**: Generate operations that work well in 3-way merges and collaborative scenarios
+- **Performance**: Optimized for real-time, per-keystroke patch generation
+- **Intent preservation**: Capture the user's intended change rather than just the final state
+- **Reliability**: Consistent, well-tested behavior across different data types and editing patterns
 
-The document ID used in the patches is either extracted from item A and item B (`_id` property), or can be set explicitly by using the `id` option. This is _required_ if the `_id` property differs in the two items, to prevent patching the wrong document.
+Used internally by the Sanity App SDK for its collaborative editing system.
 
-If encountering `undefined` values within an array, they will be converted to `null` values and print a warning to the console. Should you want to remove undefined values from arrays, manually remove them from the array prior to diffing (`array.filter(item => typeof item === 'undefined')` is your friend).
+## Installation
 
-## Getting started
-
-npm install --save @sanity/diff-patch
-
-## Usage
-
-```js
-import {diffPatch} from '@sanity/diff-patch'
-
-const patch = diffPatch(itemA, itemB)
-/*
-[
-  {patch: {id: 'docId', set: {...}}},
-  {patch: {id: 'docId', unset: [...]}},
-  {patch: {id: 'docId', insert: {...}}}
-]
-*/
+```bash
+npm install @sanity/diff-patch
 ```
 
-## Usage with mutations
+## API Reference
+
+### `diffPatch(source, target, options?)`
+
+Generate patch mutations to transform a source document into a target document.
+
+**Parameters:**
+
+- `source: DocumentStub` - The original document
+- `target: DocumentStub` - The desired document state
+- `options?: PatchOptions` - Configuration options
+
+**Returns:** `SanityPatchMutation[]` - Array of patch mutations
+
+**Options:**
+
+```typescript
+interface PatchOptions {
+  id?: string // Document ID (extracted from _id if not provided)
+  basePath?: Path // Base path for patches (default: [])
+  ifRevisionID?: string | true // Revision lock for optimistic updates
+}
+```
+
+**Example:**
 
 ```js
 import {diffPatch} from '@sanity/diff-patch'
-import sanityClient from './myConfiguredSanityClient'
 
-const itemA = {
-  _id: 'die-hard-iii',
+const source = {
+  _id: 'movie-123',
   _type: 'movie',
-  _rev: 'k0k0s',
-  name: 'Die Hard 3',
-  year: 1995,
-  characters: [
+  _rev: 'abc',
+  title: 'The Matrix',
+  year: 1999,
+}
+
+const target = {
+  _id: 'movie-123',
+  _type: 'movie',
+  title: 'The Matrix Reloaded',
+  year: 2003,
+  director: 'The Wachowskis',
+}
+
+const mutations = diffPatch(source, target, {ifRevisionID: true})
+// [
+//   {
+//     patch: {
+//       id: 'movie-123',
+//       ifRevisionID: 'abc',
+//       set: {
+//         title: 'The Matrix Reloaded',
+//         year: 2003,
+//         director: 'The Wachowskis'
+//       }
+//     }
+//   }
+// ]
+```
+
+### `diffValue(source, target, basePath?)`
+
+Generate patch operations for values without document wrapper.
+
+**Parameters:**
+
+- `source: unknown` - The original value
+- `target: unknown` - The desired value state
+- `basePath?: Path` - Base path to prefix operations (default: [])
+
+**Returns:** `SanityPatchOperations[]` - Array of patch operations
+
+**Example:**
+
+```js
+import {diffValue} from '@sanity/diff-patch'
+
+const source = {
+  name: 'John',
+  tags: ['developer'],
+}
+
+const target = {
+  name: 'John Doe',
+  tags: ['developer', 'typescript'],
+  active: true,
+}
+
+const operations = diffValue(source, target)
+// [
+//   {
+//     set: {
+//       name: 'John Doe',
+//       'tags[1]': 'typescript',
+//       active: true
+//     }
+//   }
+// ]
+
+// With base path
+const operations = diffValue(source, target, ['user', 'profile'])
+// [
+//   {
+//     set: {
+//       'user.profile.name': 'John Doe',
+//       'user.profile.tags[1]': 'typescript',
+//       'user.profile.active': true
+//     }
+//   }
+// ]
+```
+
+## Collaborative Editing Example
+
+The library generates patches that preserve user intent and minimize conflicts in collaborative scenarios:
+
+```js
+// Starting document
+const originalDoc = {
+  _id: 'blog-post-123',
+  _type: 'blogPost',
+  title: 'Getting Started with Sanity',
+  paragraphs: [
     {
-      _key: 'ma4sg31',
-      name: 'John McClane'
+      _key: 'intro',
+      _type: 'paragraph',
+      text: 'Sanity is a complete content operating system for modern applications.',
     },
     {
-      _key: 'l13ma92',
-      name: 'Simon Gruber'
-    }
-  ]
-}
-
-const itemB = {
-  _id: 'drafts.die-hard-iii',
-  _type: 'movie',
-  name: 'Die Hard with a Vengeance',
-  characters: [
-    {
-      _key: 'ma4sg31',
-      name: 'John McClane'
+      _key: 'benefits',
+      _type: 'paragraph',
+      text: 'It offers real-time collaboration and gives developers controll over the entire stack.',
     },
     {
-      _key: 'l13ma92',
-      name: 'Simon Grüber'
-    }
-  ]
+      _key: 'conclusion',
+      _type: 'paragraph',
+      text: 'Learning Sanity will help you take control of your content workflow.',
+    },
+  ],
 }
 
-// Specify id if the two documents do not match
-const operations = diffPatch(itemA, itemB, {id: itemA._id, ifRevisionID: itemA._rev})
-await sanityClient.transaction(operations).commit()
+// User A reorders paragraphs AND fixes a typo
+const userAChanges = {
+  ...originalDoc,
+  paragraphs: [
+    {
+      _key: 'intro',
+      _type: 'paragraph',
+      text: 'Sanity is a complete content operating system for modern applications.',
+    },
+    {
+      _key: 'conclusion', // Moved conclusion before benefits
+      _type: 'paragraph',
+      text: 'Learning Sanity will help you take control of your content workflow.',
+    },
+    {
+      _key: 'benefits',
+      _type: 'paragraph',
+      text: 'It offers real-time collaboration and gives developers control over the entire stack.', // Fixed typo: "controll" → "control"
+    },
+  ],
+}
 
-// Patches generated:
-const generatedPatches = [
-  {
-    patch: {
-      id: 'die-hard-iii',
-      ifRevisionID: 'k0k0s',
-      set: {
-        'name': 'Die Hard with a Vengeance',
-        'characters[_key=="l13ma92"].name': 'Simon Grüber'
-      },
-    }
-  },
-  {
-    patch: {
-      id: 'die-hard-iii',
-      unset: ['year']
-    }
-  }
+// User B simultaneously improves the intro text
+const userBChanges = {
+  ...originalDoc,
+  paragraphs: [
+    {
+      _key: 'intro',
+      _type: 'paragraph',
+      text: 'Sanity is a complete content operating system that gives developers control over the entire stack.', // Added more specific language about developer control
+    },
+    {
+      _key: 'benefits',
+      _type: 'paragraph',
+      text: 'It offers real-time collaboration and gives developers control over the entire stack.',
+    },
+    {
+      _key: 'conclusion',
+      _type: 'paragraph',
+      text: 'Learning Sanity will help you take control of your content workflow.',
+    },
+  ],
+}
+
+// Generate patches that capture each user's intent
+const patchA = diffPatch(originalDoc, userAChanges)
+const patchB = diffPatch(originalDoc, userBChanges)
+
+// Apply both patches - they merge successfully because they target different aspects
+// User A's reordering and typo fix + User B's content improvement both apply
+const finalMergedResult = {
+  _id: 'blog-post-123',
+  _type: 'blogPost',
+  title: 'Getting Started with Sanity',
+  paragraphs: [
+    {
+      _key: 'intro',
+      _type: 'paragraph',
+      text: 'Sanity is a complete content operating system that gives developers control over the entire stack.', // ✅ User B's improvement
+    },
+    {
+      _key: 'conclusion', // ✅ User A's reordering
+      _type: 'paragraph',
+      text: 'Learning Sanity will help you take control of your content workflow.',
+    },
+    {
+      _key: 'benefits',
+      _type: 'paragraph',
+      text: 'It offers real-time collaboration and gives developers control over the entire stack.', // ✅ User A's typo fix
+    },
+  ],
 }
 ```
 
-## diff-match-patch
+## Technical Details
 
-When encountering two strings to compare, this module will (by default) attempt to use [diff-match-patch (DMP)](https://www.sanity.io/docs/http-patches#diffmatchpatch-aTbJhlAJ) to transition the string from one state to the next.
+### String Diffing with diff-match-patch
 
-While these patches are extremely helpful (especially in a real-time, collaborative environment), they sometimes grow quite large and can be hard for humans to read. There are a few options you can use to tweak _when_ this module will use these patches, and when to fall back to a regular `set`-patch instead.
+When comparing strings, the library attempts to use [diff-match-patch](https://www.sanity.io/docs/http-patches#diffmatchpatch-aTbJhlAJ) to generate granular text patches instead of simple replacements. This preserves editing intent and enables better conflict resolution.
 
-The default rules says:
+**Automatic selection criteria:**
 
-- If the target string is below 30 characters long, don't use DMP
-- If the generated DMP is greater than 1.2 times larger than the target string, don't use DMP
+- **String size limit**: Strings larger than 1MB use `set` operations
+- **Change ratio threshold**: If >40% of text changes (determined by simple string length difference), uses `set` (indicates replacement vs. editing)
+- **Small text optimization**: Strings <10KB will always use diff-match-patch
+- **System key protection**: Properties starting with `_` (e.g. `_type`, `_key`) always use `set` operations as these are not typically edited by users
 
-To tune these rules, you can pass options to the differ:
+**Performance rationale:**
+
+These thresholds are based on performance testing of the underlying `@sanity/diff-match-patch` library on an M2 MacBook Pro:
+
+- **Keystroke editing**: 0ms for typical edits, sub-millisecond even on large strings
+- **Small insertions/pastes**: 0-10ms for content <50KB
+- **Large insertions/deletions**: 0-50ms for content >50KB
+- **Text replacements**: Can be 70ms-2s+ due to algorithm complexity
+
+The 40% change ratio threshold catches problematic replacement scenarios while allowing the algorithm to excel at insertions, deletions, and small edits.
+
+**Migration from v5:**
+
+Version 5 allowed configuring diff-match-patch behavior with `lengthThresholdAbsolute` and `lengthThresholdRelative` options. Version 6 removes these options in favor of tested defaults that provide consistent performance across real-world editing patterns. This allows us to change the behavior of this over time to better meet performance needs.
+
+### Array Handling
+
+**Keyed arrays**: Arrays containing objects with `_key` properties are diffed by key rather than index, producing more stable patches for collaborative editing.
+
+**Index-based arrays**: Arrays without keys are diffed by index position.
+
+**Undefined values**: When `undefined` values are encountered in arrays, they are converted to `null`. This follows the same behavior as `JSON.stringify()` and ensures consistent serialization. To remove undefined values before diffing:
 
 ```js
-import {diffPatch} from '@sanity/diff-patch'
-
-diffPatch(itemA, itemB, {
-  diffMatchPatch: {
-    // Default is true, set to false to _always_ use `set`-patches
-    enabled: true,
-
-    // Only use diff-match-patch if target string is longer than this threshold
-    lengthThresholdAbsolute: 30,
-
-    // Only use generated diff-match-patch if the patch length is less than or equal to
-    // (targetString * relative). Example: A 100 character target with a relative factor
-    // of 1.2 will allow a 120 character diff-match-patch. If larger than this number,
-    // it will fall back to a regular `set` patch.
-    lengthThresholdRelative: 1.2,
-  },
-})
+const cleanArray = array.filter((item) => typeof item !== 'undefined')
 ```
 
-In addition to these rules, there are certain cases where it will never use diff-match-patch:
+### System Keys
 
-- If the patched key starts with an underscore (eg `_type`, `_key`, `_ref`)
-- If the diff-match-patch implementation cannot generate a legal patch due to unicode issues
+The following keys are ignored at the root of the document when diffing a document as they are managed by Sanity:
 
-## Needs improvement
+- `_id`
+- `_type`
+- `_createdAt`
+- `_updatedAt`
+- `_rev`
 
-- Improve patch on array item move
-- Improve patch on array item delete
+### Error Handling
+
+- **Missing document ID**: Throws error if `_id` differs between documents and no explicit `id` option provided
+- **Immutable \_type**: Throws error if attempting to change `_type` at document root
+- **Multi-dimensional arrays**: Not supported, throws `DiffError`
+- **Invalid revision**: Throws error if `ifRevisionID: true` but no `_rev` in source document
 
 ## License
 
