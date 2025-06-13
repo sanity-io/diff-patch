@@ -1,6 +1,6 @@
 import {makePatches, stringifyPatches} from '@sanity/diff-match-patch'
 import {DiffError} from './diffError.js'
-import {type Path, pathToString} from './paths.js'
+import {isKeyedObject, type KeyedSanityObject, type Path, pathToString} from './paths.js'
 import {validateProperty} from './validate.js'
 import {
   type Patch,
@@ -13,6 +13,7 @@ import {
   type SanityInsertPatchOperation,
   type SanityDiffMatchPatchOperation,
 } from './patches.js'
+import {difference, intersection} from './setOperations.js'
 
 /**
  * Document keys that are ignored during diff operations.
@@ -40,16 +41,6 @@ const DMP_MAX_STRING_LENGTH_CHANGE_RATIO = 0.4
 const DMP_MIN_SIZE_FOR_RATIO_CHECK = 10_000
 
 type PrimitiveValue = string | number | boolean | null | undefined
-
-/**
- * An object (record) that has a `_key` property
- *
- * @internal
- */
-export interface KeyedSanityObject {
-  [key: string]: unknown
-  _key: string
-}
 
 /**
  * An object (record) that _may_ have a `_key` property
@@ -235,11 +226,20 @@ function diffObject(itemA: SanityObject, itemB: SanityObject, path: Path, patche
 }
 
 function diffArray(itemA: unknown[], itemB: unknown[], path: Path, patches: Patch[]) {
+  if (isUniquelyKeyed(itemA) && isUniquelyKeyed(itemB)) {
+    return diffArrayByKey(itemA, itemB, path, patches)
+  }
+
+  return diffArrayByIndex(itemA, itemB, path, patches)
+}
+
+function diffArrayByIndex(itemA: unknown[], itemB: unknown[], path: Path, patches: Patch[]) {
   // Check for new items
   if (itemB.length > itemA.length) {
     patches.push({
       op: 'insert',
-      after: path.concat([-1]),
+      position: 'after',
+      path: path.concat([-1]),
       items: itemB.slice(itemA.length).map(nullifyUndefined),
     })
   }
@@ -276,39 +276,125 @@ function diffArray(itemA: unknown[], itemB: unknown[], path: Path, patches: Patc
   const segmentA = itemA.slice(0, overlapping)
   const segmentB = itemB.slice(0, overlapping)
 
-  return isUniquelyKeyed(segmentA) && isUniquelyKeyed(segmentB)
-    ? diffArrayByKey(segmentA, segmentB, path, patches)
-    : diffArrayByIndex(segmentA, segmentB, path, patches)
-}
-
-function diffArrayByIndex(itemA: unknown[], itemB: unknown[], path: Path, patches: Patch[]) {
-  for (let i = 0; i < itemA.length; i++) {
-    diffItem(itemA[i], nullifyUndefined(itemB[i]), path.concat(i), patches)
+  for (let i = 0; i < segmentA.length; i++) {
+    diffItem(segmentA[i], nullifyUndefined(segmentB[i]), path.concat(i), patches)
   }
 
   return patches
 }
 
+/**
+ * Diffs two arrays of keyed objects by their `_key` properties.
+ *
+ * This approach is preferred over index-based diffing for collaborative editing scenarios
+ * because it generates patches that are more resilient to concurrent modifications.
+ * When multiple users edit the same array simultaneously, key-based patches have better
+ * conflict resolution characteristics than index-based patches.
+ *
+ * The function handles three main operations:
+ * 1. **Reordering**: When existing items change positions within the array
+ * 2. **Content changes**: When the content of existing items is modified
+ * 3. **Insertions/Deletions**: When items are added or removed from the array
+ *
+ * @param source - The original array with keyed objects
+ * @param target - The target array with keyed objects
+ * @param path - The path to this array within the document
+ * @param patches - Array to accumulate generated patches
+ * @returns The patches array with new patches appended
+ */
 function diffArrayByKey(
-  itemA: KeyedSanityObject[],
-  itemB: KeyedSanityObject[],
+  source: KeyedSanityObject[],
+  target: KeyedSanityObject[],
   path: Path,
   patches: Patch[],
 ) {
-  const keyedA = indexByKey(itemA)
-  const keyedB = indexByKey(itemB)
+  // Create lookup maps for efficient key-based access to array items
+  const sourceItemsByKey = new Map(source.map((item) => [item._key, item]))
+  const targetItemsByKey = new Map(target.map((item) => [item._key, item]))
 
-  // There's a bunch of hard/semi-hard problems related to using keys
-  // Unless we have the exact same order, just use indexes for now
-  if (!arrayIsEqual(keyedA.keys, keyedB.keys)) {
-    return diffArrayByIndex(itemA, itemB, path, patches)
+  // Categorize keys by their presence in source vs target arrays
+  const sourceKeys = new Set(sourceItemsByKey.keys())
+  const targetKeys = new Set(targetItemsByKey.keys())
+  const keysRemovedFromSource = difference(sourceKeys, targetKeys)
+  const keysAddedToTarget = difference(targetKeys, sourceKeys)
+  const keysInBothArrays = intersection(sourceKeys, targetKeys)
+
+  // Handle reordering of existing items within the array.
+  // We detect reordering by comparing the relative positions of keys that exist in both arrays,
+  // excluding keys that were added or removed (since they don't participate in reordering).
+  const sourceKeysStillPresent = Array.from(difference(sourceKeys, keysRemovedFromSource))
+  const targetKeysAlreadyPresent = Array.from(difference(targetKeys, keysAddedToTarget))
+
+  // Track which keys need to be reordered by comparing their relative positions
+  const keyReorderOperations: {sourceKey: string; targetKey: string}[] = []
+
+  for (let i = 0; i < keysInBothArrays.size; i++) {
+    const keyAtPositionInSource = sourceKeysStillPresent[i]
+    const keyAtPositionInTarget = targetKeysAlreadyPresent[i]
+
+    // If different keys occupy the same relative position, a reorder is needed
+    if (keyAtPositionInSource !== keyAtPositionInTarget) {
+      keyReorderOperations.push({
+        sourceKey: keyAtPositionInSource,
+        targetKey: keyAtPositionInTarget,
+      })
+    }
   }
 
-  for (let i = 0; i < keyedB.keys.length; i++) {
-    const key = keyedB.keys[i]
-    const valueA = keyedA.index[key]
-    const valueB = nullifyUndefined(keyedB.index[key])
-    diffItem(valueA, valueB, path.concat({_key: key}), patches)
+  // Generate reorder patch if any items changed positions
+  if (keyReorderOperations.length) {
+    patches.push({
+      op: 'reorder',
+      path,
+      snapshot: source,
+      reorders: keyReorderOperations,
+    })
+  }
+
+  // Process content changes for items that exist in both arrays
+  for (const key of keysInBothArrays) {
+    diffItem(sourceItemsByKey.get(key), targetItemsByKey.get(key), [...path, {_key: key}], patches)
+  }
+
+  // Remove items that no longer exist in the target array
+  for (const keyToRemove of keysRemovedFromSource) {
+    patches.push({op: 'unset', path: [...path, {_key: keyToRemove}]})
+  }
+
+  // Insert new items that were added to the target array
+  // We batch consecutive insertions for efficiency and insert them at the correct positions
+  if (keysAddedToTarget.size) {
+    let insertionAnchorKey: string // The key after which we'll insert pending items
+    let itemsPendingInsertion: unknown[] = []
+
+    const flushPendingInsertions = () => {
+      if (itemsPendingInsertion.length) {
+        patches.push({
+          op: 'insert',
+          // Insert after the anchor key if we have one, otherwise insert at the beginning
+          ...(insertionAnchorKey
+            ? {position: 'after', path: [...path, {_key: insertionAnchorKey}]}
+            : {position: 'before', path: [...path, 0]}),
+          items: itemsPendingInsertion,
+        })
+      }
+    }
+
+    // Walk through the target array to determine where new items should be inserted
+    for (const key of targetKeys) {
+      if (keysAddedToTarget.has(key)) {
+        // This is a new item - add it to the pending insertion batch
+        itemsPendingInsertion.push(targetItemsByKey.get(key)!)
+      } else if (keysInBothArrays.has(key)) {
+        // This is an existing item - flush any pending insertions before it
+        flushPendingInsertions()
+        insertionAnchorKey = key
+        itemsPendingInsertion = []
+      }
+    }
+
+    // Flush any remaining insertions at the end
+    flushPendingInsertions()
   }
 
   return patches
@@ -494,9 +580,58 @@ function serializePatches(patches: Patch[], curr?: SanityPatchOperation): Sanity
       if (curr) return [curr, ...serializePatches(patches)]
 
       return [
-        {insert: {after: pathToString(patch.after), items: patch.items}},
+        {
+          insert: {
+            [patch.position]: pathToString(patch.path),
+            items: patch.items,
+          },
+        } as SanityInsertPatchOperation,
         ...serializePatches(rest),
       ]
+    }
+    case 'reorder': {
+      if (curr) return [curr, ...serializePatches(patches)]
+
+      // REORDER STRATEGY: Two-phase approach to avoid key collisions
+      //
+      // Problem: Direct key swaps can cause collisions. For example, swapping A↔B:
+      // - Set A's content to B: ✓
+      // - Set B's content to A: ✗ (A's content was already overwritten)
+      //
+      // Solution: Use temporary keys as an intermediate step
+      // Phase 1: Move all items to temporary keys with their final content
+      // Phase 2: Update just the _key property to restore the final keys
+
+      // Phase 1: Move items to collision-safe temporary keys
+      const tempKeyOperations: SanityPatchOperations = {}
+      tempKeyOperations.set = {}
+
+      for (const {sourceKey, targetKey} of patch.reorders) {
+        const temporaryKey = `__temp_reorder_${sourceKey}__`
+        const finalContentForThisPosition =
+          patch.snapshot[getIndexForKey(patch.snapshot, targetKey)]
+
+        Object.assign(tempKeyOperations.set, {
+          [pathToString([...patch.path, {_key: sourceKey}])]: {
+            ...finalContentForThisPosition,
+            _key: temporaryKey,
+          },
+        })
+      }
+
+      // Phase 2: Update _key properties to restore the intended final keys
+      const finalKeyOperations: SanityPatchOperations = {}
+      finalKeyOperations.set = {}
+
+      for (const {sourceKey, targetKey} of patch.reorders) {
+        const temporaryKey = `__temp_reorder_${sourceKey}__`
+
+        Object.assign(finalKeyOperations.set, {
+          [pathToString([...patch.path, {_key: temporaryKey}, '_key'])]: targetKey,
+        })
+      }
+
+      return [tempKeyOperations, finalKeyOperations, ...serializePatches(rest)]
     }
     default: {
       return []
@@ -505,37 +640,40 @@ function serializePatches(patches: Patch[], curr?: SanityPatchOperation): Sanity
 }
 
 function isUniquelyKeyed(arr: unknown[]): arr is KeyedSanityObject[] {
-  const keys = []
+  const seenKeys = new Set<string>()
 
-  for (let i = 0; i < arr.length; i++) {
-    const key = getKey(arr[i])
-    if (!key || keys.indexOf(key) !== -1) {
-      return false
-    }
+  for (const item of arr) {
+    // Each item must be a keyed object with a _key property
+    if (!isKeyedObject(item)) return false
 
-    keys.push(key)
+    // Each _key must be unique within the array
+    if (seenKeys.has(item._key)) return false
+
+    seenKeys.add(item._key)
   }
 
   return true
 }
 
-function getKey(obj: unknown) {
-  return typeof obj === 'object' && obj !== null && (obj as KeyedSanityObject)._key
-}
+// Cache to avoid recomputing key-to-index mappings for the same array
+const keyToIndexCache = new WeakMap<KeyedSanityObject[], Record<string, number>>()
 
-function indexByKey(arr: KeyedSanityObject[]) {
-  return arr.reduce(
-    (acc, item) => {
-      acc.keys.push(item._key)
-      acc.index[item._key] = item
-      return acc
+function getIndexForKey(keyedArray: KeyedSanityObject[], targetKey: string) {
+  const cachedMapping = keyToIndexCache.get(keyedArray)
+  if (cachedMapping) return cachedMapping[targetKey]
+
+  // Build a mapping from _key to array index
+  const keyToIndexMapping = keyedArray.reduce<Record<string, number>>(
+    (mapping, {_key}, arrayIndex) => {
+      mapping[_key] = arrayIndex
+      return mapping
     },
-    {keys: [] as string[], index: {} as {[key: string]: KeyedSanityObject}},
+    {},
   )
-}
 
-function arrayIsEqual(itemA: unknown[], itemB: unknown[]) {
-  return itemA.length === itemB.length && itemA.every((item, i) => itemB[i] === item)
+  keyToIndexCache.set(keyedArray, keyToIndexMapping)
+
+  return keyToIndexMapping[targetKey]
 }
 
 /**

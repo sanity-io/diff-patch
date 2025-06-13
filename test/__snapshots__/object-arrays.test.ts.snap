@@ -6,7 +6,7 @@ exports[`object arrays > add to end (multiple) 1`] = `
     "patch": {
       "id": "die-hard-iii",
       "insert": {
-        "after": "characters[-1]",
+        "after": "characters[_key=="john"]",
         "items": [
           {
             "_key": "simon",
@@ -29,7 +29,7 @@ exports[`object arrays > add to end (single) 1`] = `
     "patch": {
       "id": "die-hard-iii",
       "insert": {
-        "after": "characters[-1]",
+        "after": "characters[_key=="john"]",
         "items": [
           {
             "_key": "simon",
@@ -93,28 +93,217 @@ exports[`object arrays > remove from middle (single) 1`] = `
     "patch": {
       "id": "die-hard-iii",
       "unset": [
-        "characters[_key=="zeus"]",
+        "characters[_key=="simon"]",
       ],
+    },
+  },
+]
+`;
+
+exports[`object arrays > reorder (complete reverse) 1`] = `
+[
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "characters[_key=="john"]": {
+          "_key": "__temp_reorder_john__",
+          "name": "Zeus Carver",
+        },
+        "characters[_key=="zeus"]": {
+          "_key": "__temp_reorder_zeus__",
+          "name": "John McClane",
+        },
+      },
     },
   },
   {
     "patch": {
       "id": "die-hard-iii",
       "set": {
-        "characters[1]._key": "zeus",
+        "characters[_key=="__temp_reorder_john__"]._key": "zeus",
+        "characters[_key=="__temp_reorder_zeus__"]._key": "john",
+      },
+    },
+  },
+]
+`;
+
+exports[`object arrays > reorder (simple swap) 1`] = `
+[
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "characters[_key=="john"]": {
+          "_key": "__temp_reorder_john__",
+          "name": "Simon Gruber",
+        },
+        "characters[_key=="simon"]": {
+          "_key": "__temp_reorder_simon__",
+          "name": "John McClane",
+        },
+      },
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "characters[_key=="__temp_reorder_john__"]._key": "simon",
+        "characters[_key=="__temp_reorder_simon__"]._key": "john",
+      },
+    },
+  },
+]
+`;
+
+exports[`object arrays > reorder with content change 1`] = `
+[
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "characters[_key=="john"]": {
+          "_key": "__temp_reorder_john__",
+          "name": "Zeus Carver",
+        },
+        "characters[_key=="simon"]": {
+          "_key": "__temp_reorder_simon__",
+          "name": "John McClane",
+        },
+        "characters[_key=="zeus"]": {
+          "_key": "__temp_reorder_zeus__",
+          "name": "Simon Gruber",
+        },
+      },
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "characters[_key=="__temp_reorder_john__"]._key": "zeus",
+        "characters[_key=="__temp_reorder_simon__"]._key": "john",
+        "characters[_key=="__temp_reorder_zeus__"]._key": "simon",
       },
     },
   },
   {
     "patch": {
       "diffMatchPatch": {
-        "characters[1].name": "@@ -1,12 +1,11 @@
--Simon Grub
-+Zeus Carv
- er
+        "characters[_key=="zeus"].name": "@@ -4,8 +4,12 @@
+ s Carver
++ Jr.
 ",
       },
       "id": "die-hard-iii",
+    },
+  },
+]
+`;
+
+exports[`object arrays > reorder with insertion and deletion 1`] = `
+[
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "characters[_key=="john"]": {
+          "_key": "__temp_reorder_john__",
+          "name": "Zeus Carver",
+        },
+        "characters[_key=="zeus"]": {
+          "_key": "__temp_reorder_zeus__",
+          "name": "John McClane",
+        },
+      },
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "characters[_key=="__temp_reorder_john__"]._key": "zeus",
+        "characters[_key=="__temp_reorder_zeus__"]._key": "john",
+      },
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "unset": [
+        "characters[_key=="simon"]",
+      ],
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "insert": {
+        "after": "characters[_key=="zeus"]",
+        "items": [
+          {
+            "_key": "hans",
+            "name": "Hans Gruber",
+          },
+        ],
+      },
+    },
+  },
+]
+`;
+
+exports[`object arrays > reorder with size change (multiple insertions) 1`] = `
+[
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "characters[_key=="john"]": {
+          "_key": "__temp_reorder_john__",
+          "name": "Zeus Carver",
+        },
+        "characters[_key=="zeus"]": {
+          "_key": "__temp_reorder_zeus__",
+          "name": "John McClane",
+        },
+      },
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "characters[_key=="__temp_reorder_john__"]._key": "zeus",
+        "characters[_key=="__temp_reorder_zeus__"]._key": "john",
+      },
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "unset": [
+        "characters[_key=="simon"]",
+      ],
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "insert": {
+        "after": "characters[_key=="john"]",
+        "items": [
+          {
+            "_key": "hans",
+            "name": "Hans Gruber",
+          },
+          {
+            "_key": "karl",
+            "name": "Karl Vreski",
+          },
+        ],
+      },
     },
   },
 ]
