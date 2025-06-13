@@ -15,7 +15,7 @@ describe('module api', () => {
   test('throws if ids do not match', () => {
     const b = {...setAndUnset.b, _id: 'zing'}
     expect(() => diffPatch(setAndUnset.a, b)).toThrowError(
-      `_id on itemA and itemB not present or differs, specify document id the mutations should be applied to`,
+      `_id on source and target not present or differs, specify document id the mutations should be applied to`,
     )
   })
 
