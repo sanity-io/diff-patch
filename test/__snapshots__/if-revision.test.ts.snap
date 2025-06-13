@@ -4,15 +4,6 @@ exports[`ifRevisionID > can apply revision constraint (inferred from document) 1
 [
   {
     "patch": {
-      "id": "die-hard-iii",
-      "ifRevisionID": "datrev",
-      "set": {
-        "rating": 4,
-      },
-    },
-  },
-  {
-    "patch": {
       "diffMatchPatch": {
         "title": "@@ -6,5 +6,20 @@
  ard 
@@ -21,6 +12,15 @@ exports[`ifRevisionID > can apply revision constraint (inferred from document) 1
 ",
       },
       "id": "die-hard-iii",
+      "ifRevisionID": "datrev",
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "rating": 4,
+      },
     },
   },
 ]
@@ -30,15 +30,6 @@ exports[`ifRevisionID > can apply revision constraint (uppercase) 1`] = `
 [
   {
     "patch": {
-      "id": "die-hard-iii",
-      "ifRevisionID": "abc123",
-      "set": {
-        "rating": 4,
-      },
-    },
-  },
-  {
-    "patch": {
       "diffMatchPatch": {
         "title": "@@ -6,5 +6,20 @@
  ard 
@@ -47,6 +38,15 @@ exports[`ifRevisionID > can apply revision constraint (uppercase) 1`] = `
 ",
       },
       "id": "die-hard-iii",
+      "ifRevisionID": "abc123",
+    },
+  },
+  {
+    "patch": {
+      "id": "die-hard-iii",
+      "set": {
+        "rating": 4,
+      },
     },
   },
 ]

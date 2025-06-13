@@ -464,55 +464,44 @@ type SanityPatchOperation =
   | SanityInsertPatchOperation
   | SanityDiffMatchPatchOperation
 
-function serializePatches(patches: Patch[]): SanityPatchOperation[] {
-  if (patches.length === 0) {
-    return []
+function serializePatches(patches: Patch[], curr?: SanityPatchOperation): SanityPatchOperations[] {
+  const [patch, ...rest] = patches
+  if (!patch) return curr ? [curr] : []
+
+  switch (patch.op) {
+    case 'set':
+    case 'diffMatchPatch': {
+      // TODO: reconfigure eslint to use @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line no-unused-vars
+      type CurrentOp = Extract<SanityPatchOperation, {[K in typeof patch.op]: {}}>
+      const emptyOp = {[patch.op]: {}} as CurrentOp
+
+      if (!curr) return serializePatches(patches, emptyOp)
+      if (!(patch.op in curr)) return [curr, ...serializePatches(patches, emptyOp)]
+
+      Object.assign((curr as CurrentOp)[patch.op], {[pathToString(patch.path)]: patch.value})
+      return serializePatches(rest, curr)
+    }
+    case 'unset': {
+      const emptyOp = {unset: []}
+      if (!curr) return serializePatches(patches, emptyOp)
+      if (!('unset' in curr)) return [curr, ...serializePatches(patches, emptyOp)]
+
+      curr.unset.push(pathToString(patch.path))
+      return serializePatches(rest, curr)
+    }
+    case 'insert': {
+      if (curr) return [curr, ...serializePatches(patches)]
+
+      return [
+        {insert: {after: pathToString(patch.after), items: patch.items}},
+        ...serializePatches(rest),
+      ]
+    }
+    default: {
+      return []
+    }
   }
-
-  const set = patches.filter((patch) => patch.op === 'set')
-  const unset = patches.filter((patch) => patch.op === 'unset')
-  const insert = patches.filter((patch) => patch.op === 'insert')
-  const dmp = patches.filter((patch) => patch.op === 'diffMatchPatch')
-
-  const withSet =
-    set.length > 0 &&
-    set.reduce<SanitySetPatchOperation>(
-      (patch, item) => {
-        const path = pathToString(item.path)
-        patch.set[path] = item.value
-        return patch
-      },
-      {set: {}},
-    )
-
-  const withUnset =
-    unset.length > 0 &&
-    unset.reduce<SanityUnsetPatchOperation>(
-      (patch, item) => {
-        const path = pathToString(item.path)
-        patch.unset.push(path)
-        return patch
-      },
-      {unset: []},
-    )
-
-  const withInsert = insert.reduce<SanityInsertPatchOperation[]>((acc, item) => {
-    const after = pathToString(item.after)
-    return acc.concat({insert: {after, items: item.items}})
-  }, [])
-
-  const withDmp =
-    dmp.length > 0 &&
-    dmp.reduce<SanityDiffMatchPatchOperation>(
-      (patch, item) => {
-        const path = pathToString(item.path)
-        patch.diffMatchPatch[path] = item.value
-        return patch
-      },
-      {diffMatchPatch: {}},
-    )
-
-  return [withUnset, withSet, withDmp, ...withInsert].filter((i) => i !== false)
 }
 
 function isUniquelyKeyed(arr: unknown[]): arr is KeyedSanityObject[] {

@@ -9,21 +9,29 @@ describe('diff data types', () => {
       {
         patch: {
           id: dataTypes.a._id,
-          set: {
-            isFeatured: false,
-            rating: 4.24,
-            year: 1995,
+
+          diffMatchPatch: {title: '@@ -6,5 +6,20 @@\n ard \n-3\n+with a Vengeance\n'},
+        },
+      },
+      {
+        patch: {
+          id: dataTypes.a._id,
+          set: {isFeatured: false, rating: 4.24},
+        },
+      },
+      {
+        patch: {
+          id: dataTypes.a._id,
+          diffMatchPatch: {
+            'characters[0]': '@@ -1,12 +1,12 @@\n-John McClane\n+Simon Gruber\n',
+            'slug.current': '@@ -6,7 +6,20 @@\n ard-\n-iii\n+with-a-vengeance\n',
           },
         },
       },
       {
         patch: {
-          id: 'die-hard-iii',
-          diffMatchPatch: {
-            title: '@@ -6,5 +6,20 @@\n ard \n-3\n+with a Vengeance\n',
-            'characters[0]': '@@ -1,12 +1,12 @@\n-John McClane\n+Simon Gruber\n',
-            'slug.current': '@@ -6,7 +6,20 @@\n ard-\n-iii\n+with-a-vengeance\n',
-          },
+          id: dataTypes.a._id,
+          set: {year: 1995},
         },
       },
     ])
@@ -60,25 +68,15 @@ describe('diff data types', () => {
 
   test('type changes', () => {
     expect(diffPatch(typeChange.a, typeChange.b)).toEqual([
-      {patch: {id: 'abc123', unset: ['unset', 'array[2].two.levels.deep']}},
+      {patch: {id: 'abc123', unset: ['unset']}},
+      {patch: {id: 'abc123', set: {number: 1337}}},
+      {patch: {diffMatchPatch: {string: '@@ -1,3 +1,3 @@\n-foo\n+bar\n'}, id: 'abc123'}},
+      {patch: {id: 'abc123', set: {'array[0]': 0, 'array[1]': 'one', bool: false}}},
+      {patch: {id: 'abc123', unset: ['array[2].two.levels.deep']}},
       {
         patch: {
           id: 'abc123',
-          set: {
-            'array[0]': 0,
-            'array[1]': 'one',
-            'array[2].two.levels.other': 'value',
-            bool: false,
-            number: 1337,
-            'object.b12': '12',
-            'object.f13': null,
-          },
-        },
-      },
-      {
-        patch: {
-          id: 'abc123',
-          diffMatchPatch: {string: '@@ -1,3 +1,3 @@\n-foo\n+bar\n'},
+          set: {'array[2].two.levels.other': 'value', 'object.b12': '12', 'object.f13': null},
         },
       },
     ])
