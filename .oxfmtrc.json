@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": false,
+  "printWidth": 100,
+  "bracketSpacing": false,
+  "singleQuote": true,
+  "proseWrap": "preserve",
+  "ignorePatterns": ["pnpm-lock.yaml", "CHANGELOG.md", "test/__snapshots__/**"]
+}

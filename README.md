@@ -1,6 +1,9 @@
 # @sanity/diff-patch
 
-[![npm version](https://img.shields.io/npm/v/@sanity/diff-patch.svg?style=flat-square)](https://www.npmjs.com/package/@sanity/diff-patch)[![npm bundle size](https://img.shields.io/bundlephobia/minzip/@sanity/diff-patch?style=flat-square)](https://bundlephobia.com/result?p=@sanity/diff-patch)[![npm weekly downloads](https://img.shields.io/npm/dw/@sanity/diff-patch.svg?style=flat-square)](https://www.npmjs.com/package/@sanity/diff-patch)
+[![Latest version](https://npmx.dev/api/registry/badge/version/@sanity/diff-patch?color=69E3EE)](https://npmx.dev/package/@sanity/diff-patch)
+[![Number of dependencies](https://npmx.dev/api/registry/badge/dependencies/@sanity/diff-patch?color=69E3EE)](https://npmx.dev/package/@sanity/diff-patch)
+[![Supported node versions](https://npmx.dev/api/registry/badge/engines/@sanity/diff-patch?color=69E3EE)](https://npmx.dev/package/@sanity/diff-patch)
+[![Downloads per month](https://npmx.dev/api/registry/badge/downloads/@sanity/diff-patch?color=69E3EE)](https://npmx.dev/package/@sanity/diff-patch)
 
 Generate Sanity patch mutations by comparing two documents or values. This library creates conflict-resistant patches designed for collaborative editing environments where multiple users may be editing the same document simultaneously.
 
@@ -14,6 +17,10 @@ Generate Sanity patch mutations by comparing two documents or values. This libra
 Used internally by the Sanity App SDK for its collaborative editing system.
 
 ## Installation
+
+Requires Node.js 22.12.0 or later. This package ships ES modules only.
+
+To work on this repository, use Node.js 24 (`nvm use`) and the pnpm version specified in `package.json`.
 
 ```bash
 npm install @sanity/diff-patch

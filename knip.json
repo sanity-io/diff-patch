@@ -1,0 +1,4 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["package.config.ts", "bundle-stats.config.ts"]
+}

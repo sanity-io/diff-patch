@@ -41,13 +41,6 @@ const DMP_MAX_STRING_LENGTH_CHANGE_RATIO = 0.4
 const DMP_MIN_SIZE_FOR_RATIO_CHECK = 10_000
 
 /**
- * An object (record) that _may_ have a `_key` property
- *
- * @internal
- */
-export type SanityObject = KeyedSanityObject | Partial<KeyedSanityObject>
-
-/**
  * Represents a partial Sanity document (eg a "stub").
  *
  * @public
@@ -252,9 +245,10 @@ function diffArrayByIndex(source: unknown[], target: unknown[], path: Path, patc
     // safer in a realtime, collaborative setting
     if (isUniquelyKeyed(unsetItems)) {
       patches.push(
-        ...unsetItems.map(
-          (item): UnsetPatch => ({op: 'unset', path: path.concat({_key: item._key})}),
-        ),
+        ...unsetItems.map((item): UnsetPatch => ({
+          op: 'unset',
+          path: path.concat({_key: item._key}),
+        })),
       )
     } else {
       patches.push({
@@ -456,7 +450,7 @@ function diffArrayByKey(
  *
  * Compatible with @sanity/diff-match-patch@3.2.0
  */
-export function shouldUseDiffMatchPatch(source: string, target: string): boolean {
+function shouldUseDiffMatchPatch(source: string, target: string): boolean {
   const maxLength = Math.max(source.length, target.length)
 
   // Always reject strings larger than our tested size limit
@@ -508,7 +502,7 @@ function getDiffMatchPatch(source: string, target: string, path: Path): DiffMatc
     // - Individual step breakdown: makeDiff(0ms) + cleanup(0ms) + makePatches(0ms) + stringify(~1ms)
     const strPatch = stringifyPatches(makePatches(source, target))
     return {op: 'diffMatchPatch', path, value: strPatch}
-  } catch (err) {
+  } catch {
     // Fall back to using regular set patch
     return undefined
   }
@@ -538,8 +532,6 @@ function serializePatches(patches: Patch[], curr?: SanityPatchOperation): Sanity
   switch (patch.op) {
     case 'set':
     case 'diffMatchPatch': {
-      // TODO: reconfigure eslint to use @typescript-eslint/no-unused-vars
-      // eslint-disable-next-line no-unused-vars
       type CurrentOp = Extract<SanityPatchOperation, {[K in typeof patch.op]: {}}>
       const emptyOp = {[patch.op]: {}} as CurrentOp
 
@@ -671,6 +663,6 @@ function nullifyUndefined(item: unknown) {
   return item
 }
 
-function yes(_: unknown) {
+function yes() {
   return true
 }
