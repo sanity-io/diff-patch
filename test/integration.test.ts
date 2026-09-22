@@ -1,6 +1,5 @@
-/* eslint-disable no-sync, max-nested-callbacks */
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import PQueue from 'p-queue'
 import {createClient} from '@sanity/client'
 import {describe, test, expect} from 'vitest'
@@ -29,12 +28,10 @@ function nullifyUndefinedArrayItems(item: unknown): unknown {
   return item
 }
 
-/* eslint-disable no-process-env */
 const enabled = process.env.ENABLE_INTEGRATION_TESTS || ''
 const projectId = process.env.SANITY_TEST_PROJECT_ID || ''
 const dataset = process.env.SANITY_TEST_DATASET || ''
 const token = process.env.SANITY_TEST_TOKEN || ''
-/* eslint-enable no-process-env */
 
 const queue = new PQueue({concurrency: 4})
 const lacksConfig = !enabled || !projectId || !dataset || !token
@@ -57,89 +54,84 @@ interface JsFixture {
   fixture: {[key: string]: any}
 }
 
-describe.skipIf(lacksConfig)(
-  'integration tests',
-  async () => {
-    const client = createClient({
-      projectId: projectId || 'ci',
-      dataset,
-      token,
-      useCdn: false,
-      apiVersion: '2023-04-24',
-    })
-    const fixturesDir = path.join(__dirname, 'fixtures')
-    const jsonFixturesDir = path.join(fixturesDir, 'integration')
+describe.skipIf(lacksConfig)('integration tests', {timeout: 120000}, async () => {
+  const client = createClient({
+    projectId: projectId || 'ci',
+    dataset,
+    token,
+    useCdn: false,
+    apiVersion: '2023-04-24',
+  })
+  const fixturesDir = path.join(import.meta.dirname, 'fixtures')
+  const jsonFixturesDir = path.join(fixturesDir, 'integration')
 
-    const jsonFixtures: Fixture[] = fs
-      .readdirSync(jsonFixturesDir)
-      .filter((file) => /^\d+\.json$/.test(file))
-      .map((file) => ({file, fixture: readJsonFixture(path.join(jsonFixturesDir, file))}))
+  const jsonFixtures: Fixture[] = fs
+    .readdirSync(jsonFixturesDir)
+    .filter((file) => /^\d+\.json$/.test(file))
+    .map((file) => ({file, fixture: readJsonFixture(path.join(jsonFixturesDir, file))}))
 
-    const rawJsFixtures: {file: string; fixture: JsFixture}[] = await Promise.all(
-      fs
-        .readdirSync(fixturesDir)
-        .filter((file) => /\.ts$/.test(file))
-        .map(async (file) => ({
-          file,
-          fixture: await readCodeFixture(path.join(fixturesDir, file)),
-        })),
-    )
+  const rawJsFixtures: {file: string; fixture: JsFixture}[] = await Promise.all(
+    fs
+      .readdirSync(fixturesDir)
+      .filter((file) => file.endsWith('.ts'))
+      .map(async (file) => ({
+        file,
+        fixture: await readCodeFixture(path.join(fixturesDir, file)),
+      })),
+  )
 
-    const jsFixtures = rawJsFixtures.reduce((acc: Fixture[], item: JsFixture) => {
-      const entries = Object.keys(item.fixture)
-      return acc.concat(
-        entries.reduce((set: Fixture[], key: string) => {
-          for (let x = 0; x < entries.length; x++) {
-            // Don't diff against self
-            if (key === entries[x]) {
-              continue
-            }
-
-            const input = item.fixture[key]
-            const output = item.fixture[entries[x]]
-            const name = `${item.file} (${key} vs ${entries[x]})`
-            set.push({file: item.file, name, fixture: {input, output}})
+  const jsFixtures = rawJsFixtures.reduce((acc: Fixture[], item: JsFixture) => {
+    const entries = Object.keys(item.fixture)
+    return acc.concat(
+      entries.reduce((set: Fixture[], key: string) => {
+        for (let x = 0; x < entries.length; x++) {
+          // Don't diff against self
+          if (key === entries[x]) {
+            continue
           }
 
-          return set
-        }, []),
+          const input = item.fixture[key]
+          const output = item.fixture[entries[x]]
+          const name = `${item.file} (${key} vs ${entries[x]})`
+          set.push({file: item.file, name, fixture: {input, output}})
+        }
+
+        return set
+      }, []),
+    )
+  }, [])
+
+  const fixtures: Fixture[] = [...jsonFixtures, ...jsFixtures]
+
+  fixtures.forEach((fix) => {
+    const name = fix.name || fix.file
+    test(`${name}`, async () => {
+      const _type = 'test'
+      const _id = `fix-${fix.name || fix.file}`
+        .replace(/[^a-z0-9-]+/gi, '-')
+        .replace(/(^-|-$)/g, '')
+
+      const input = {...fix.fixture.input, _id, _type}
+      const output = {...fix.fixture.output, _id, _type}
+      const diff = diffPatch(input, output)
+
+      const trx = client.transaction().createOrReplace(input).serialize()
+
+      const result = await queue.add(
+        () =>
+          client.transaction([...trx, ...diff]).commit({
+            visibility: 'async',
+            returnDocuments: true,
+            returnFirst: true,
+            dryRun: true,
+          }),
+        {timeout: 10000},
       )
-    }, [])
 
-    const fixtures: Fixture[] = [...jsonFixtures, ...jsFixtures]
-
-    fixtures.forEach((fix) => {
-      test(fix.name || fix.file, async () => {
-        const _type = 'test'
-        const _id = `fix-${fix.name || fix.file}`
-          .replace(/[^a-z0-9-]+/gi, '-')
-          .replace(/(^-|-$)/g, '')
-
-        const input = {...fix.fixture.input, _id, _type}
-        const output = {...fix.fixture.output, _id, _type}
-        const diff = diffPatch(input, output)
-
-        const trx = client.transaction().createOrReplace(input).serialize()
-
-        const result = await queue.add(
-          () =>
-            client.transaction([...trx, ...diff]).commit({
-              visibility: 'async',
-              returnDocuments: true,
-              returnFirst: true,
-              dryRun: true,
-            }),
-          {throwOnTimeout: true, timeout: 10000},
-        )
-
-        expect(omitIgnored(result)).toEqual(nullifyUndefinedArrayItems(omitIgnored(output)))
-      })
+      expect(omitIgnored(result)).toEqual(nullifyUndefinedArrayItems(omitIgnored(output)))
     })
-  },
-  {
-    timeout: 120000,
-  },
-)
+  })
+})
 
 function readJsonFixture(fixturePath: string) {
   const content = fs.readFileSync(fixturePath, {encoding: 'utf8'})

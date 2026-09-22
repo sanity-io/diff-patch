@@ -25,7 +25,7 @@
     "skipLibCheck": true,
 
     // Module resolution
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
   }

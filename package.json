@@ -2,93 +2,81 @@
   "name": "@sanity/diff-patch",
   "version": "6.0.0",
   "description": "Generates a set of Sanity patches needed to change an item (usually a document) from one shape to another",
-  "sideEffects": false,
-  "type": "module",
+  "keywords": [
+    "compare",
+    "diff",
+    "mutation",
+    "patch",
+    "sanity"
+  ],
+  "license": "MIT",
+  "author": "Sanity.io <hello@sanity.io>",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/sanity-io/diff-patch.git"
   },
+  "files": [
+    "dist",
+    "!dist/analyze-data.md",
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "source": "./src/index.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "engines": {
-    "node": ">=18.2"
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./package.json": "./package.json"
+    },
+    "provenance": true
   },
-  "browserslist": "extends @sanity/browserslist-config",
-  "author": "Sanity.io <hello@sanity.io>",
-  "license": "MIT",
-  "files": [
-    "dist",
-    "!dist/stats.html",
-    "src"
-  ],
-  "keywords": [
-    "sanity",
-    "patch",
-    "diff",
-    "mutation",
-    "compare"
-  ],
   "scripts": {
+    "check": "knip",
     "clean": "rimraf dist coverage",
-    "coverage": "vitest --coverage",
-    "build": "pkg-utils build && pkg-utils --strict",
-    "prebuild": "npm run clean",
-    "lint": "eslint . && tsc --noEmit",
-    "test": "vitest --reporter=verbose",
-    "posttest": "npm run lint",
-    "prepublishOnly": "npm run build"
+    "coverage": "vitest run --coverage",
+    "build": "pkg-utils build && pkg-utils check --strict",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint --deny-warnings . && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm build",
+    "changeset": "changeset",
+    "version-packages": "changeset version && pnpm install --lockfile-only && oxfmt --write package.json",
+    "release": "changeset publish"
   },
   "dependencies": {
-    "@sanity/diff-match-patch": "^3.2.0"
+    "@sanity/diff-match-patch": "^3.2.1"
   },
   "devDependencies": {
-    "@sanity/client": "^6.27.2",
-    "@sanity/pkg-utils": "^6.13.4",
-    "@sanity/semantic-release-preset": "^5.0.0",
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
-    "@vitest/coverage-v8": "2.1.3",
-    "eslint": "^8.57.1",
-    "eslint-config-prettier": "^8.10.0",
-    "eslint-config-sanity": "^6.0.0",
-    "p-queue": "^8.1.0",
-    "prettier": "^3.4.2",
-    "rimraf": "^6.0.1",
-    "rollup-plugin-visualizer": "^5.14.0",
-    "semantic-release": "^24.2.1",
-    "typescript": "^5.7.3",
-    "vite": "^5.4.14",
-    "vitest": "^2.1.9"
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "@rexxars/bundle-stats": "^2.0.0",
+    "@sanity/client": "^8.6.2",
+    "@sanity/pkg-utils": "^13.0.2",
+    "@types/node": "^22.20.4",
+    "@vitest/coverage-v8": "^5.0.1",
+    "knip": "^6.37.0",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "p-queue": "^9.3.3",
+    "rimraf": "^6.1.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   },
-  "prettier": {
-    "semi": false,
-    "printWidth": 100,
-    "bracketSpacing": false,
-    "singleQuote": true
+  "browserslist": "extends @sanity/browserslist-config",
+  "engines": {
+    "node": ">=22.12.0"
   },
-  "eslintConfig": {
-    "parserOptions": {
-      "ecmaVersion": 9,
-      "sourceType": "module",
-      "ecmaFeatures": {
-        "modules": true
-      }
-    },
-    "extends": [
-      "sanity",
-      "sanity/typescript",
-      "prettier"
-    ]
-  },
-  "packageManager": "pnpm@9.12.1"
+  "packageManager": "pnpm@12.5.1"
 }

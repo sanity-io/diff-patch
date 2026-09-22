@@ -48,7 +48,7 @@ exports[`diff match patch > handles patching with unicode surrogate pairs 1`] = 
 +%3C3
  , re
 ",
-        "reviews[_key=="abc123"].text": "@@ -30,15 +30,15 @@
+        "reviews[_key=="abc123"].text": "@@ -30,12 +30,12 @@
  tal 
 -%F0%9F%98%89
 +%F0%9F%98%80

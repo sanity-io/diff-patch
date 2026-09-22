@@ -6,7 +6,7 @@ import type {KeyedSanityObject, Path} from './paths.js'
  *
  * @internal
  */
-export interface SetPatch {
+interface SetPatch {
   op: 'set'
   path: Path
   value: unknown
@@ -29,7 +29,7 @@ export interface UnsetPatch {
  *
  * @internal
  */
-export interface InsertPatch {
+interface InsertPatch {
   op: 'insert'
   position: 'before' | 'after' | 'replace'
   path: Path
