@@ -37,7 +37,7 @@ jobs:
       SANITY_TEST_DATASET: ${{ vars.SANITY_TEST_DATASET }}
       SANITY_TEST_TOKEN: ${{ secrets.SANITY_TEST_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v2
       - uses: actions/setup-node@v4
         with:
@@ -52,7 +52,7 @@ jobs:
     if: always() && github.event.inputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # Need to fetch entire commit history to
           # analyze every commit since last release
