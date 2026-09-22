@@ -1,5 +1,7 @@
 allowBuilds:
   esbuild: true
+trustPolicyExcludePrune: true
+minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
   - '@oxfmt/binding-android-arm-eabi@0.70.0'
   - '@oxfmt/binding-android-arm64@0.70.0'
