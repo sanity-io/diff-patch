@@ -1,5 +1,13 @@
 <!-- markdownlint-disable --><!-- textlint-disable -->
 
+## 7.0.0
+
+### Major Changes
+
+- [#52](https://github.com/sanity-io/diff-patch/pull/52) [`5e27253`](https://github.com/sanity-io/diff-patch/commit/5e27253f6c199295070bb80f50c68b89b8b796a8) Thanks [@rexxars](https://github.com/rexxars)! - Require Node.js 22.12.0 or later and ship ES modules only. The CommonJS build has been removed. Use ESM imports when consuming this package.
+  
+  Upgrade `@sanity/diff-match-patch` to fix UTF-8 byte lengths in patches containing emoji and other characters outside the Basic Multilingual Plane.
+
 # 📓 Changelog
 
 All notable changes to this project will be documented in this file. See
