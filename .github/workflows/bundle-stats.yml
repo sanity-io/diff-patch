@@ -24,7 +24,7 @@ jobs:
           node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - uses: rexxars/bundle-stats@b11fe4b835df717bd7b0fd755e40523417059c7f # v2
+      - uses: rexxars/bundle-stats@c8bb783559da734cbb251f66731ee5227ba41059 # v2
         with:
           config: bundle-stats.config.ts
           build-command: pnpm build
