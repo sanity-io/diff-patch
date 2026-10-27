@@ -23,9 +23,17 @@ describe('validate', () => {
     )
   })
 
+  test('any non-empty string `_key` is valid', () => {
+    for (const _key of ['a', '$', 'bad key!', 'q"uote', 'back\\slash', 'bra]cket']) {
+      expect(validateDocument({_id: 'agot', _type: 'book', author: {_key, name: 'GRRM'}})).toBe(
+        true,
+      )
+    }
+  })
+
   test('invalid keys', () => {
     expect(() => {
-      validateDocument({_id: 'agot', _type: 'book', author: {_key: '$', name: 'GRRM'}})
+      validateDocument({_id: 'agot', _type: 'book', author: {_key: '', name: 'GRRM'}})
     }).toThrowErrorMatchingInlineSnapshot(
       `[Error: Invalid key - use less exotic characters (at 'author._key')]`,
     )
