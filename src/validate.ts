@@ -62,7 +62,7 @@ export function validateProperty(property: string, value: unknown, path: Path): 
       throw new DiffError('Keys must be strings', path.concat(property), value)
     }
 
-    if (!idPattern.test(value)) {
+    if (property === '_key' ? value === '' : !idPattern.test(value)) {
       throw new DiffError('Invalid key - use less exotic characters', path.concat(property), value)
     }
   }
