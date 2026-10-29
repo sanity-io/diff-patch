@@ -4,6 +4,7 @@ import * as objectArrayAdd from './fixtures/object-array-add'
 import * as objectArrayRemove from './fixtures/object-array-remove'
 import * as objectArrayChange from './fixtures/object-array-change'
 import * as objectArrayReorder from './fixtures/object-array-reorder'
+import {applyAsTransaction, applySeparately} from './helpers/applyPatches'
 
 describe('object arrays', () => {
   test('change item', () => {
@@ -49,4 +50,15 @@ describe('object arrays', () => {
   test('reorder with size change (multiple insertions)', () => {
     expect(diffPatch(objectArrayReorder.a, objectArrayReorder.f)).toMatchSnapshot()
   })
+
+  test.each(['b', 'c', 'd', 'e', 'f'] as const)(
+    'reorder fixture %s applies to the target',
+    (name) => {
+      const target = {_type: 'movie', ...objectArrayReorder[name]}
+      const source = {_type: 'movie', ...objectArrayReorder.a}
+      const patches = diffPatch(source, target)
+      expect(applySeparately(source, patches)).toEqual(target)
+      expect(applyAsTransaction(source, patches)).toEqual(target)
+    },
+  )
 })

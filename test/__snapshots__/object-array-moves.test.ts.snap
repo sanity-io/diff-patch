@@ -1,0 +1,196 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`object array moves > a move combined with an added and a removed item 1`] = `
+[
+  {
+    "patch": {
+      "id": "blocks",
+      "unset": [
+        "body[_key=="c1"]",
+        "body[_key=="e1"]",
+      ],
+    },
+  },
+  {
+    "patch": {
+      "id": "blocks",
+      "insert": {
+        "before": "body[_key=="a1"]",
+        "items": [
+          {
+            "_key": "e1",
+            "_type": "block",
+            "text": "Echo",
+          },
+        ],
+      },
+    },
+  },
+  {
+    "patch": {
+      "id": "blocks",
+      "insert": {
+        "after": "body[_key=="a1"]",
+        "items": [
+          {
+            "_key": "f1",
+            "_type": "block",
+            "text": "Foxtrot",
+          },
+        ],
+      },
+    },
+  },
+]
+`;
+
+exports[`object array moves > a move keeps the text diff of a stable item 1`] = `
+[
+  {
+    "patch": {
+      "diffMatchPatch": {
+        "body[_key=="b1"].text": "@@ -1,5 +1,9 @@
+ Bravo
++ Two
+",
+      },
+      "id": "blocks",
+    },
+  },
+  {
+    "patch": {
+      "id": "blocks",
+      "unset": [
+        "body[_key=="e1"]",
+      ],
+    },
+  },
+  {
+    "patch": {
+      "id": "blocks",
+      "insert": {
+        "before": "body[_key=="a1"]",
+        "items": [
+          {
+            "_key": "e1",
+            "_type": "block",
+            "text": "Echo",
+          },
+        ],
+      },
+    },
+  },
+]
+`;
+
+exports[`object array moves > a moved item carries its changed content in the insert 1`] = `
+[
+  {
+    "patch": {
+      "id": "blocks",
+      "unset": [
+        "body[_key=="e1"]",
+      ],
+    },
+  },
+  {
+    "patch": {
+      "id": "blocks",
+      "insert": {
+        "before": "body[_key=="a1"]",
+        "items": [
+          {
+            "_key": "e1",
+            "_type": "block",
+            "text": "Echo Two",
+          },
+        ],
+      },
+    },
+  },
+]
+`;
+
+exports[`object array moves > moving the first item to the end touches only that item 1`] = `
+[
+  {
+    "patch": {
+      "id": "blocks",
+      "unset": [
+        "body[_key=="a1"]",
+      ],
+    },
+  },
+  {
+    "patch": {
+      "id": "blocks",
+      "insert": {
+        "after": "body[_key=="e1"]",
+        "items": [
+          {
+            "_key": "a1",
+            "_type": "block",
+            "text": "Alpha",
+          },
+        ],
+      },
+    },
+  },
+]
+`;
+
+exports[`object array moves > moving the last item to the top touches only that item 1`] = `
+[
+  {
+    "patch": {
+      "id": "blocks",
+      "unset": [
+        "body[_key=="e1"]",
+      ],
+    },
+  },
+  {
+    "patch": {
+      "id": "blocks",
+      "insert": {
+        "before": "body[_key=="a1"]",
+        "items": [
+          {
+            "_key": "e1",
+            "_type": "block",
+            "text": "Echo",
+          },
+        ],
+      },
+    },
+  },
+]
+`;
+
+exports[`object array moves > swapping two neighbours moves one of them 1`] = `
+[
+  {
+    "patch": {
+      "id": "blocks",
+      "unset": [
+        "body[_key=="b1"]",
+      ],
+    },
+  },
+  {
+    "patch": {
+      "id": "blocks",
+      "insert": {
+        "after": "body[_key=="c1"]",
+        "items": [
+          {
+            "_key": "b1",
+            "_type": "block",
+            "text": "Bravo",
+          },
+        ],
+      },
+    },
+  },
+]
+`;

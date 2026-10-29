@@ -13,7 +13,6 @@ import {
   type SanityInsertPatchOperation,
   type SanityDiffMatchPatchOperation,
 } from './patches.js'
-import {difference, intersection} from './setOperations.js'
 
 /**
  * Document keys that are ignored during diff operations.
@@ -285,8 +284,9 @@ function diffArrayByIndex(source: unknown[], target: unknown[], path: Path, patc
  * conflict resolution characteristics than index-based patches.
  *
  * The function handles three main operations:
- * 1. **Reordering**: When existing items change positions within the array
- * 2. **Content changes**: When the content of existing items is modified
+ * 1. **Moves**: Only items outside the longest run of keys whose relative order is unchanged
+ *    are moved, so items that merely shift position are left untouched
+ * 2. **Content changes**: When the content of an item that is not moved is modified
  * 3. **Insertions/Deletions**: When items are added or removed from the array
  *
  * @param source - The original array with keyed objects
@@ -301,96 +301,86 @@ function diffArrayByKey(
   path: Path,
   patches: Patch[],
 ) {
-  // Create lookup maps for efficient key-based access to array items
   const sourceItemsByKey = new Map(source.map((item) => [item._key, item]))
-  const targetItemsByKey = new Map(target.map((item) => [item._key, item]))
+  const targetIndexByKey = new Map(target.map((item, index) => [item._key, index]))
 
-  // Categorize keys by their presence in source vs target arrays
-  const sourceKeys = new Set(sourceItemsByKey.keys())
-  const targetKeys = new Set(targetItemsByKey.keys())
-  const keysRemovedFromSource = difference(sourceKeys, targetKeys)
-  const keysAddedToTarget = difference(targetKeys, sourceKeys)
-  const keysInBothArrays = intersection(sourceKeys, targetKeys)
+  const sharedKeys = source.map((item) => item._key).filter((key) => targetIndexByKey.has(key))
+  const stableKeys = longestIncreasingSubsequence(sharedKeys, (key) => targetIndexByKey.get(key)!)
 
-  // Handle reordering of existing items within the array.
-  // We detect reordering by comparing the relative positions of keys that exist in both arrays,
-  // excluding keys that were added or removed (since they don't participate in reordering).
-  const sourceKeysStillPresent = Array.from(difference(sourceKeys, keysRemovedFromSource))
-  const targetKeysAlreadyPresent = Array.from(difference(targetKeys, keysAddedToTarget))
+  for (const key of sharedKeys) {
+    // A moved item is inserted whole, so its content patches are dropped but its validation still runs
+    diffItem(
+      sourceItemsByKey.get(key),
+      target[targetIndexByKey.get(key)!],
+      [...path, {_key: key}],
+      stableKeys.has(key) ? patches : [],
+    )
+  }
 
-  // Track which keys need to be reordered by comparing their relative positions
-  const keyReorderOperations: {sourceKey: string; targetKey: string}[] = []
-
-  for (let i = 0; i < keysInBothArrays.size; i++) {
-    const keyAtPositionInSource = sourceKeysStillPresent[i]
-    const keyAtPositionInTarget = targetKeysAlreadyPresent[i]
-
-    // If different keys occupy the same relative position, a reorder is needed
-    if (keyAtPositionInSource !== keyAtPositionInTarget) {
-      keyReorderOperations.push({
-        sourceKey: keyAtPositionInSource,
-        targetKey: keyAtPositionInTarget,
-      })
+  // Moves are unset plus insert so that only the moved item is rewritten, never its neighbours
+  for (const {_key: key} of source) {
+    if (!stableKeys.has(key)) {
+      patches.push({op: 'unset', path: [...path, {_key: key}]})
     }
   }
 
-  // Generate reorder patch if any items changed positions
-  if (keyReorderOperations.length) {
+  let anchorKey: string | undefined
+  let itemsPendingInsertion: KeyedSanityObject[] = []
+
+  const flushPendingInsertions = (nextStableKey?: string) => {
+    if (!itemsPendingInsertion.length) return
+
     patches.push({
-      op: 'reorder',
-      path,
-      snapshot: source,
-      reorders: keyReorderOperations,
+      op: 'insert',
+      ...(anchorKey
+        ? {position: 'after', path: [...path, {_key: anchorKey}]}
+        : nextStableKey
+          ? {position: 'before', path: [...path, {_key: nextStableKey}]}
+          : {position: 'before', path: [...path, 0]}),
+      items: itemsPendingInsertion,
     })
+    itemsPendingInsertion = []
   }
 
-  // Process content changes for items that exist in both arrays
-  for (const key of keysInBothArrays) {
-    diffItem(sourceItemsByKey.get(key), targetItemsByKey.get(key), [...path, {_key: key}], patches)
-  }
-
-  // Remove items that no longer exist in the target array
-  for (const keyToRemove of keysRemovedFromSource) {
-    patches.push({op: 'unset', path: [...path, {_key: keyToRemove}]})
-  }
-
-  // Insert new items that were added to the target array
-  // We batch consecutive insertions for efficiency and insert them at the correct positions
-  if (keysAddedToTarget.size) {
-    let insertionAnchorKey: string // The key after which we'll insert pending items
-    let itemsPendingInsertion: unknown[] = []
-
-    const flushPendingInsertions = () => {
-      if (itemsPendingInsertion.length) {
-        patches.push({
-          op: 'insert',
-          // Insert after the anchor key if we have one, otherwise insert at the beginning
-          ...(insertionAnchorKey
-            ? {position: 'after', path: [...path, {_key: insertionAnchorKey}]}
-            : {position: 'before', path: [...path, 0]}),
-          items: itemsPendingInsertion,
-        })
-      }
+  for (const item of target) {
+    if (stableKeys.has(item._key)) {
+      flushPendingInsertions(item._key)
+      anchorKey = item._key
+    } else {
+      itemsPendingInsertion.push(item)
     }
-
-    // Walk through the target array to determine where new items should be inserted
-    for (const key of targetKeys) {
-      if (keysAddedToTarget.has(key)) {
-        // This is a new item - add it to the pending insertion batch
-        itemsPendingInsertion.push(targetItemsByKey.get(key)!)
-      } else if (keysInBothArrays.has(key)) {
-        // This is an existing item - flush any pending insertions before it
-        flushPendingInsertions()
-        insertionAnchorKey = key
-        itemsPendingInsertion = []
-      }
-    }
-
-    // Flush any remaining insertions at the end
-    flushPendingInsertions()
   }
+
+  flushPendingInsertions()
 
   return patches
+}
+
+function longestIncreasingSubsequence(
+  keys: string[],
+  getPosition: (key: string) => number,
+): Set<string> {
+  const tails: number[] = []
+  const predecessors: number[] = []
+
+  for (let i = 0; i < keys.length; i++) {
+    const position = getPosition(keys[i])
+    let low = 0
+    let high = tails.length
+    while (low < high) {
+      const mid = (low + high) >>> 1
+      if (getPosition(keys[tails[mid]]) < position) low = mid + 1
+      else high = mid
+    }
+    predecessors[i] = low > 0 ? tails[low - 1] : -1
+    tails[low] = i
+  }
+
+  const result: string[] = []
+  for (let i = tails.length ? tails[tails.length - 1] : -1; i !== -1; i = predecessors[i]) {
+    result.push(keys[i])
+  }
+  return new Set(result.reverse())
 }
 
 /**
@@ -562,50 +552,6 @@ function serializePatches(patches: Patch[], curr?: SanityPatchOperation): Sanity
         ...serializePatches(rest),
       ]
     }
-    case 'reorder': {
-      if (curr) return [curr, ...serializePatches(patches)]
-
-      // REORDER STRATEGY: Two-phase approach to avoid key collisions
-      //
-      // Problem: Direct key swaps can cause collisions. For example, swapping A↔B:
-      // - Set A's content to B: ✓
-      // - Set B's content to A: ✗ (A's content was already overwritten)
-      //
-      // Solution: Use temporary keys as an intermediate step
-      // Phase 1: Move all items to temporary keys with their final content
-      // Phase 2: Update just the _key property to restore the final keys
-
-      // Phase 1: Move items to collision-safe temporary keys
-      const tempKeyOperations: SanityPatchOperations = {}
-      tempKeyOperations.set = {}
-
-      for (const {sourceKey, targetKey} of patch.reorders) {
-        const temporaryKey = `__temp_reorder_${sourceKey}__`
-        const finalContentForThisPosition =
-          patch.snapshot[getIndexForKey(patch.snapshot, targetKey)]
-
-        Object.assign(tempKeyOperations.set, {
-          [pathToString([...patch.path, {_key: sourceKey}])]: {
-            ...finalContentForThisPosition,
-            _key: temporaryKey,
-          },
-        })
-      }
-
-      // Phase 2: Update _key properties to restore the intended final keys
-      const finalKeyOperations: SanityPatchOperations = {}
-      finalKeyOperations.set = {}
-
-      for (const {sourceKey, targetKey} of patch.reorders) {
-        const temporaryKey = `__temp_reorder_${sourceKey}__`
-
-        Object.assign(finalKeyOperations.set, {
-          [pathToString([...patch.path, {_key: temporaryKey}, '_key'])]: targetKey,
-        })
-      }
-
-      return [tempKeyOperations, finalKeyOperations, ...serializePatches(rest)]
-    }
     default: {
       return []
     }
@@ -626,27 +572,6 @@ function isUniquelyKeyed(arr: unknown[]): arr is KeyedSanityObject[] {
   }
 
   return true
-}
-
-// Cache to avoid recomputing key-to-index mappings for the same array
-const keyToIndexCache = new WeakMap<KeyedSanityObject[], Record<string, number>>()
-
-function getIndexForKey(keyedArray: KeyedSanityObject[], targetKey: string) {
-  const cachedMapping = keyToIndexCache.get(keyedArray)
-  if (cachedMapping) return cachedMapping[targetKey]
-
-  // Build a mapping from _key to array index
-  const keyToIndexMapping = keyedArray.reduce<Record<string, number>>(
-    (mapping, {_key}, arrayIndex) => {
-      mapping[_key] = arrayIndex
-      return mapping
-    },
-    {},
-  )
-
-  keyToIndexCache.set(keyedArray, keyToIndexMapping)
-
-  return keyToIndexMapping[targetKey]
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
