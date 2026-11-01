@@ -21,7 +21,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '24.22.2'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: rexxars/bundle-stats@c8bb783559da734cbb251f66731ee5227ba41059 # v2

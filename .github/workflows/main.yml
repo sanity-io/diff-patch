@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           # Build and release tooling requires a newer Node than the library itself.
-          node-version: '24'
+          node-version: '24.22.2'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -69,7 +69,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '24.22.2'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Create release PR or publish to npm
