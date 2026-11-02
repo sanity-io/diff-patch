@@ -140,10 +140,10 @@ describe('safeguards', () => {
     }).toThrowErrorMatchingInlineSnapshot(`[Error: Keys must be strings (at 'author._key')]`)
   })
 
-  test('object `_key` must be identifiers', () => {
+  test('object `_key` must not be empty', () => {
     expect(() => {
       diffPatch(
-        {_id: 'agot', _type: 'book', author: {_key: '$', name: 'GRRM'}},
+        {_id: 'agot', _type: 'book', author: {_key: '', name: 'GRRM'}},
         {_id: 'agot', _type: 'book', author: {_key: 'foo', name: 'GRRM'}},
       )
     }).toThrowErrorMatchingInlineSnapshot(
@@ -153,7 +153,7 @@ describe('safeguards', () => {
     expect(() => {
       diffPatch(
         {_id: 'agot', _type: 'book', author: {_key: 'foo', name: 'GRRM'}},
-        {_id: 'agot', _type: 'book', author: {_key: '$', name: 'GRRM'}},
+        {_id: 'agot', _type: 'book', author: {_key: '', name: 'GRRM'}},
       )
     }).toThrowErrorMatchingInlineSnapshot(
       `[Error: Invalid key - use less exotic characters (at 'author._key')]`,

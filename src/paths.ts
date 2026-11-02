@@ -32,7 +32,7 @@ export function pathToString(path: Path): string {
     }
 
     if (isKeyedObject(segment)) {
-      return `${target}[_key=="${segment._key}"]`
+      return `${target}[_key=="${escapeQuoted(segment._key)}"]`
     }
 
     if (typeof segment === 'number') {
@@ -50,6 +50,12 @@ export function pathToString(path: Path): string {
 
     throw new Error(`Unsupported path segment "${segment}"`)
   }, '')
+}
+
+// Only backslash and double quote are escaped because the patch path parser ends a quoted key
+// only at its closing quote and reads a backslash as making the next character literal.
+function escapeQuoted(value: string): string {
+  return value.replace(/[\\"]/g, '\\$&')
 }
 
 /**
