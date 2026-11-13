@@ -63,7 +63,7 @@
     "@rexxars/bundle-stats": "^2.0.0",
     "@sanity/client": "^8.6.2",
     "@sanity/pkg-utils": "^13.0.2",
-    "@types/node": "^22.20.4",
+    "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.0.1",
     "knip": "^6.37.0",
     "oxfmt": "^0.70.0",
